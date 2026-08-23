@@ -73,45 +73,95 @@ export default function SakhiVoiceApp() {
     };
   }, []);
 
-  // Web Speech Synthesis Speaker
-  const speakText = (text: string, onComplete?: () => void) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      setVoiceState("IDLE");
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // High-Quality Natural Hindi Voice Speaker
+  const speakText = (textHindiDevanagari: string, textFallback: string, onComplete?: () => void) => {
+    if (typeof window === "undefined") {
       if (onComplete) onComplete();
       return;
     }
 
-    window.speechSynthesis.cancel(); // Stop any previous speech
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.0;
-    utterance.pitch = 1.05;
-
-    // Try Hindi / Indian English voice
-    const voices = window.speechSynthesis.getVoices();
-    const hindiVoice = voices.find((v) => v.lang.includes("hi") || v.lang.includes("IN"));
-    if (hindiVoice) {
-      utterance.voice = hindiVoice;
+    // Stop any existing audio or speech
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current.currentTime = 0;
+      currentAudioRef.current = null;
+    }
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
     }
 
-    utterance.onstart = () => {
+    setVoiceState("SPEAKING");
+
+    // Tier 1: Natural High-Fidelity Hindi Audio Stream from /api/tts
+    const textToStream = textHindiDevanagari || textFallback;
+    const audioUrl = `/api/tts?text=${encodeURIComponent(textToStream)}&lang=${lang === "hi" ? "hi" : "en"}`;
+    const audio = new Audio(audioUrl);
+    currentAudioRef.current = audio;
+
+    audio.onplay = () => {
       setVoiceState("SPEAKING");
     };
 
-    utterance.onend = () => {
+    audio.onended = () => {
       setVoiceState("IDLE");
+      currentAudioRef.current = null;
       if (onComplete) onComplete();
     };
 
-    utterance.onerror = () => {
-      setVoiceState("IDLE");
-      if (onComplete) onComplete();
+    audio.onerror = (e) => {
+      console.warn("Audio stream fallback to Web Speech Synthesis:", e);
+      // Tier 2 Fallback: Browser Web Speech Synthesis with Indian Voice
+      if ("speechSynthesis" in window) {
+        const utterance = new SpeechSynthesisUtterance(textHindiDevanagari || textFallback);
+        utterance.rate = 0.95;
+        utterance.pitch = 1.0;
+        utterance.lang = lang === "hi" ? "hi-IN" : "en-IN";
+
+        const voices = window.speechSynthesis.getVoices();
+        const hindiVoice = voices.find(
+          (v) =>
+            v.lang.toLowerCase().includes("hi") ||
+            v.lang.toLowerCase().includes("in") ||
+            v.name.toLowerCase().includes("hindi") ||
+            v.name.toLowerCase().includes("swara") ||
+            v.name.toLowerCase().includes("heera") ||
+            v.name.toLowerCase().includes("google हिन्दी")
+        );
+        if (hindiVoice) {
+          utterance.voice = hindiVoice;
+        }
+
+        utterance.onend = () => {
+          setVoiceState("IDLE");
+          if (onComplete) onComplete();
+        };
+        utterance.onerror = () => {
+          setVoiceState("IDLE");
+          if (onComplete) onComplete();
+        };
+
+        window.speechSynthesis.speak(utterance);
+      } else {
+        setVoiceState("IDLE");
+        if (onComplete) onComplete();
+      }
     };
 
-    window.speechSynthesis.speak(utterance);
+    audio.play().catch((err) => {
+      console.warn("Audio play blocked or failed, using SpeechSynthesis:", err);
+      audio.onerror?.(new Event("error"));
+    });
   };
 
   // Barge-in & Interruption Handler
   const handleInterrupt = () => {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current.currentTime = 0;
+      currentAudioRef.current = null;
+    }
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
@@ -171,9 +221,10 @@ export default function SakhiVoiceApp() {
       };
       setTranscript((prev) => [...prev, aiTurn]);
 
-      // Speak response aloud via Speech Synthesis
-      const textToSpeak = lang === "hi" ? data.spokenTextHindi : data.spokenTextEnglish;
-      speakText(textToSpeak, () => {
+      // Speak response aloud via High-Quality Hindi Voice
+      const devanagariText = data.spokenTextDevanagari || data.spokenTextHindi;
+      const fallbackText = lang === "hi" ? data.spokenTextHindi : data.spokenTextEnglish;
+      speakText(devanagariText, fallbackText, () => {
         // Trigger any UI action after speaking
         if (data.actionTrigger === "OPEN_CALL_MODAL") {
           setActiveBuyerCall(SEED_BUYERS[0]);
@@ -324,7 +375,8 @@ export default function SakhiVoiceApp() {
         toolTriggered: "createDeal",
       };
       setTranscript((prev) => [...prev, aiTurn]);
-      speakText(lang === "hi" ? aiTurn.textHindi : aiTurn.textEnglish);
+      const hindiDevanagari = `बधाई हो! सौदा क्रमांक ${dealResult.data?.dealId || "DEAL-9182"} डेटाबेस में दर्ज हो गया है। क्या आप बिज़नेस बढ़ाने के लिए वित्तीय सहायता देखना चाहती हैं?`;
+      speakText(hindiDevanagari, lang === "hi" ? aiTurn.textHindi : aiTurn.textEnglish);
     } catch (e) {
       console.error("Deal confirmation error:", e);
     }

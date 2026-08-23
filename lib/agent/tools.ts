@@ -7,6 +7,7 @@ export interface ToolExecutionResult {
   toolName: string;
   status: "SUCCESS" | "WARNING" | "ERROR";
   summaryHindi: string;
+  summaryDevanagari?: string;
   summaryEnglish: string;
   data: any;
   uiActionPrompt?: string;
@@ -40,6 +41,7 @@ export function executeGetMarketPrice(productQuery: string, location?: string, q
       toolName: "getMarketPrice",
       status: "WARNING",
       summaryHindi: "Is product ka verified mandi rate database mein uplabdh nahi hai.",
+      summaryDevanagari: "इस उत्पाद का सत्यापित मंडी रेट डेटाबेस में उपलब्ध नहीं है।",
       summaryEnglish: "Verified mandi rate currently unavailable for this specific product query.",
       data: null,
     };
@@ -49,6 +51,7 @@ export function executeGetMarketPrice(productQuery: string, location?: string, q
     toolName: "getMarketPrice",
     status: "SUCCESS",
     summaryHindi: `Available market data ke according similar products ka price approximately ₹${result.minPrice} se ₹${result.maxPrice} ${result.unit} hai. Suggested opening rate ₹${result.suggestedNegotiationStart} hai.`,
+    summaryDevanagari: `उपलब्ध मार्केट डेटा के अनुसार मिलते-जुलते उत्पादों की कीमत लगभग ₹${result.minPrice} से ₹${result.maxPrice} प्रति बास्केट है। बातचीत ₹${result.suggestedNegotiationStart} से शुरू करने की सलाह है।`,
     summaryEnglish: `Retrieved verified range ₹${result.minPrice} - ₹${result.maxPrice} ${result.unit} from ${result.verifiedSource}.`,
     data: result,
     actionRequired: "SHOW_MARKET",
@@ -65,6 +68,7 @@ export function executeFindBuyers(productQuery: string, quantity?: number): Tool
     toolName: "findBuyers",
     status: "SUCCESS",
     summaryHindi: `Aapke product ke liye ${buyers.length} matching buyers mile hain. Sabse strong match ${buyers[0].name} (${buyers[0].organization}) ka hai jo bulk mein khareed rahe hain.`,
+    summaryDevanagari: `आपके उत्पाद के लिए ${buyers.length} सत्यापित खरीदार मिले हैं। सबसे मजबूत मैच ${buyers[0].name} का है जो थोक में खरीद रहे हैं।`,
     summaryEnglish: `Found ${buyers.length} verified buyers currently purchasing ${productQuery || "handmade crafts"}. Top match: ${buyers[0].organization}.`,
     data: buyers,
     actionRequired: "SHOW_BUYERS",
@@ -89,6 +93,7 @@ export function executeCreateDeal(
       toolName: "createDeal",
       status: "WARNING",
       summaryHindi: `Buyer ${buyer.name} ne ${quantity} ${product} ke liye ₹${agreedPrice} per unit par agreement diya hai. Kya main is deal ko confirm karke database mein record kar doon?`,
+      summaryDevanagari: `खरीदार ${buyer.name} ने ${quantity} ${product} के लिए ₹${agreedPrice} प्रति इकाई पर सहमति दी है। क्या मैं इस सौदे को कन्फर्म करके रिकॉर्ड कर दूँ?`,
       summaryEnglish: `Buyer agreed to ₹${agreedPrice}/unit for ${quantity} units (Total: ₹${totalValue.toLocaleString("en-IN")}). Please confirm before saving.`,
       data: {
         buyerId: buyer.id,
@@ -122,6 +127,7 @@ export function executeCreateDeal(
     toolName: "createDeal",
     status: "SUCCESS",
     summaryHindi: `Badhaai ho! Deal ID ${newDeal.dealId} safaltapoorvak record ho gayi hai. Buyer ko pickup schedule bhej diya gaya hai.`,
+    summaryDevanagari: `बधाई हो! सौदा क्रमांक ${newDeal.dealId} सफलतापूर्वक डेटाबेस में दर्ज हो गया है। खरीदार को पिकअप शेड्यूल भेज दिया गया है।`,
     summaryEnglish: `Deal successfully finalized and stored in database. Total value: ₹${totalValue.toLocaleString("en-IN")}.`,
     data: newDeal,
   };
@@ -137,6 +143,7 @@ export function executeFindSupportOptions(needQuery: string): ToolExecutionResul
     toolName: "findSupportOptions",
     status: "SUCCESS",
     summaryHindi: `Aapke business expansion ke liye ${orgs.length} support organizations aur schemes mili hain. Sabse upyukt '${orgs[0].name}' hai jo mahila udyamiyon ko micro-grant aur sahayata dete hain.`,
+    summaryDevanagari: `आपके व्यापार विस्तार के लिए ${orgs.length} सहायता संस्थाएं मिली हैं। सबसे उपयुक्त '${orgs[0].name}' है जो महिला उद्यमियों को अनुदान और कार्यशील पूंजी सहायता देते हैं।`,
     summaryEnglish: `Found ${orgs.length} support institutions. Recommended: ${orgs[0].name} (${orgs[0].supportCategory}).`,
     data: orgs,
     actionRequired: "SHOW_SUPPORT",
@@ -184,6 +191,7 @@ export function executeCreateSupportCase(
     toolName: "createSupportCase",
     status: "SUCCESS",
     summaryHindi: `Aapka support case (ID: ${caseId}) Sakhi Foundation ke counselor ${org.representativeName} ko dispatch kar diya gaya hai. Aapki poori conversation summary unke paas share ho gayi hai, aapko dobara explain nahi karna padega.`,
+    summaryDevanagari: `आपका सहायता केस सखी फाउंडेशन की काउंसलर ${org.representativeName} को भेज दिया गया है। आपकी पूरी बातचीत का विवरण उनके पास पहुँच गया है, आपको दोबारा शुरू से नहीं बताना पड़ेगा।`,
     summaryEnglish: `Structured Case #${caseId} generated with full context and dispatched to counselor ${org.representativeName}. Ready for live voice escalation.`,
     data: supportCase,
     actionRequired: "ESCALATE",
