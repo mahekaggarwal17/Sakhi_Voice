@@ -31,6 +31,7 @@ import { BuyerCallModal } from "@/components/BuyerCallModal";
 import { DealConfirmModal } from "@/components/DealConfirmModal";
 import { CaseEscalationModal } from "@/components/CaseEscalationModal";
 import { DemoScenarioGuide } from "@/components/DemoScenarioGuide";
+import { VobizPhoneModal } from "@/components/VobizPhoneModal";
 import { INITIAL_BUSINESS_MEMORY, BusinessMemoryState } from "@/lib/agent/conversationState";
 import { ToolExecutionResult, RECORDED_DEALS, RECORDED_CASES } from "@/lib/agent/tools";
 import { BuyerProfile, SEED_BUYERS } from "@/lib/data/seedBuyers";
@@ -249,6 +250,7 @@ export default function SakhiVoiceWebUI() {
   const [activeEscalationCase, setActiveEscalationCase] = useState<SupportCaseRecord | null>(null);
   const [showDemoGuide, setShowDemoGuide] = useState<boolean>(false);
   const [currentDemoStep, setCurrentDemoStep] = useState<number>(0);
+  const [showVobizModal, setShowVobizModal] = useState<boolean>(false);
 
   const agoraManagerRef = useRef<AgoraVoiceManager | null>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -647,6 +649,15 @@ export default function SakhiVoiceWebUI() {
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
               <span>{t.trustBadge}</span>
             </div>
+
+            <button
+              onClick={() => setShowVobizModal(true)}
+              className="px-3.5 py-1.5 bg-[#2B7A78] hover:bg-[#1E5654] text-white font-bold text-xs rounded-2xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+              title="Vobiz Inbound & Outbound Phone Calls"
+            >
+              <Phone className="w-3.5 h-3.5" />
+              <span>{lang === "en" ? "Phone Call (Vobiz)" : "फ़ोन कॉल (Vobiz)"}</span>
+            </button>
 
             <button
               onClick={() => setShowDemoGuide(true)}
@@ -1259,16 +1270,27 @@ export default function SakhiVoiceWebUI() {
                 </div>
               </div>
 
-              <button
-                onClick={() => {
-                  const target = SEED_BUYERS.find(b => b.id === businessMemory.matchedBuyers[0]?.id) || SEED_BUYERS[0];
-                  setActiveBuyerCall(target);
-                }}
-                className="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-full shadow-md flex items-center gap-2 cursor-pointer whitespace-nowrap hover:scale-105 transition-all"
-              >
-                <PhoneCall className="w-4 h-4 animate-pulse" />
-                <span>{t.startAgoraCallBtn}</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  onClick={() => setShowVobizModal(true)}
+                  className="px-5 py-3.5 bg-[#2B7A78] hover:bg-[#1E5654] text-white font-extrabold text-xs sm:text-sm rounded-full shadow-md flex items-center gap-2 cursor-pointer whitespace-nowrap hover:scale-105 transition-all"
+                  title="Direct Phone Call via Vobiz PSTN"
+                >
+                  <Phone className="w-4 h-4" />
+                  <span>{lang === "en" ? "Vobiz Mobile Call" : "मोबाइल पर कॉल (Vobiz)"}</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    const target = SEED_BUYERS.find(b => b.id === businessMemory.matchedBuyers[0]?.id) || SEED_BUYERS[0];
+                    setActiveBuyerCall(target);
+                  }}
+                  className="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm rounded-full shadow-md flex items-center gap-2 cursor-pointer whitespace-nowrap hover:scale-105 transition-all"
+                >
+                  <PhoneCall className="w-4 h-4 animate-pulse" />
+                  <span>{t.startAgoraCallBtn}</span>
+                </button>
+              </div>
             </div>
           )}
         </main>
@@ -1299,7 +1321,24 @@ export default function SakhiVoiceWebUI() {
         />
       )}
 
-      {/* 2. Deal Confirmation Safety Gate */}
+      {/* 2. Vobiz Inbound & Outbound Phone Call System */}
+      <VobizPhoneModal
+        isOpen={showVobizModal}
+        onClose={() => setShowVobizModal(false)}
+        lang={lang}
+        initialRecipientName={
+          businessMemory.matchedBuyers && businessMemory.matchedBuyers.length > 0
+            ? `${businessMemory.matchedBuyers[0].name} (${businessMemory.matchedBuyers[0].organization})`
+            : "राजेश शर्मा (ABC Handicrafts)"
+        }
+        initialPurpose={
+          businessMemory.product
+            ? `${businessMemory.quantity || 150} ${businessMemory.product} का थोक व्यापार सौदा`
+            : "हस्तशिल्प थोक व्यापार सौदा (Trade Deal)"
+        }
+      />
+
+      {/* 3. Deal Confirmation Safety Gate */}
       {showDealConfirmModal && pendingDealData && (
         <DealConfirmModal
           buyerName={pendingDealData.buyerName}
@@ -1320,7 +1359,7 @@ export default function SakhiVoiceWebUI() {
         />
       )}
 
-      {/* 3. Counselor Escalation Modal */}
+      {/* 4. Counselor Escalation Modal */}
       {activeEscalationCase && (
         <CaseEscalationModal
           caseRecord={activeEscalationCase}
@@ -1329,7 +1368,7 @@ export default function SakhiVoiceWebUI() {
         />
       )}
 
-      {/* 4. Judge 9-Step Demo Drawer */}
+      {/* 5. Judge 9-Step Demo Drawer */}
       <DemoScenarioGuide
         isOpen={showDemoGuide}
         onClose={() => setShowDemoGuide(false)}

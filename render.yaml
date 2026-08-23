@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm install && npm run build
+    buildCommand: npm install --prefer-offline --no-audit --no-fund && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_VERSION
@@ -21,3 +21,11 @@ services:
         value: 4484034496dd4b56bf6e53d2d8a195cc
       - key: AGORA_CUSTOMER_SECRET
         value: ae3b66db366744b88e51df1f32d3a2e1
+      - key: VOBIZ_AUTH_ID
+        value: MA_Y0UIJABP
+      - key: VOBIZ_AUTH_TOKEN
+        value: OJ2JClaUVKqqnOgfsRbp323RkdZbyv6YFgfU37m9ulQMtrHYP2Y10idVU8I5KOk8
+      - key: NEXT_PUBLIC_VOBIZ_AUTH_ID
+        value: MA_Y0UIJABP
+      - key: NEXT_PUBLIC_VOBIZ_PHONE_NUMBER
+        value: 1800-72544-24
