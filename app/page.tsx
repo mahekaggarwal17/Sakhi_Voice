@@ -37,12 +37,181 @@ import { BuyerProfile, SEED_BUYERS } from "@/lib/data/seedBuyers";
 import { SupportCaseRecord, SEED_SUPPORT_ORGS } from "@/lib/data/seedSupport";
 import { AgoraVoiceManager } from "@/lib/agora/rtcClient";
 
+// Comprehensive UI translations dictionary
+const I18N = {
+  hi: {
+    appTitle: "सखी वॉयस",
+    appSubtitle: "ग्रामीण महिला उद्यमियों की आवाज़ सहायक (AI Business Agent)",
+    screen1Tab: "1. होम पेज (Landing)",
+    screen2Tab: "2. बोलकर बात करें (Voice UI)",
+    trustBadge: "आवाज़ सुरक्षित है",
+    demoGuideBtn: "डेमो गाइड",
+    langToggle: "English",
+    heroBadge: "ग्रामीण महिलाओं के लिए वॉयस-फर्स्ट बिज़नेस साथी",
+    heroH1Prefix: "सिर्फ बोलिए, ",
+    heroH1Highlight: "सखी",
+    heroH1Suffix: " आपकी मदद करेगी।",
+    heroSubhead: "बिना टाइप किए, अपनी सरल भाषा में व्यापार करें। सही मंडी भाव जानें, सीधे थोक खरीदार खोजें और सरकारी लोन अनुदान पाएं।",
+    heroCtaPrimary: "माइक दबाकर बात शुरू करें",
+    heroCtaDemo: "9-स्टेप जज डेमो देखें",
+    trustItem1: "100% निशुल्क",
+    trustItem2: "शून्य टाइपिंग",
+    trustItem3: "Agora RTC Live Voice",
+    avatarTitle: "\"नमस्ते! आप क्या बेचना चाहती हैं?\"",
+    avatarSub: "नीचे दिए गए बटन पर टैप करें और बोलें",
+    avatarSpeakBtn: "बोलिए",
+    quickAccessTitle: "त्वरित सेवाएं (Quick Access)",
+    quickAccessH2: "आप सखी से क्या पूछ सकती हैं?",
+    quickAccessSub: "किसी भी टाइल पर क्लिक करें, सखी तुरंत बोलकर पूरी जानकारी समझाएगी।",
+    tile1Title: "खेती और मंडी भाव (Mandi Rates)",
+    tile1Desc: "हस्तशिल्प और फसलों के ताज़ा सरकारी मंडी दाम जानें, ताकि कोई व्यापारी कम दाम न दे सके।",
+    tile1Action: "भाव चेक करें",
+    tile2Title: "सरकारी योजनाएं (Govt Schemes)",
+    tile2Desc: "पीएम विश्वकर्मा, मुद्रा योजना और महिला सामर्थ्य अनुदान की आसान शर्तें और फॉर्म की मदद।",
+    tile2Action: "योजनाएं देखें",
+    tile3Title: "लोन और बचत (Finance & Loans)",
+    tile3Desc: "कच्चे माल और मशीनरी के लिए ₹25,000 से ₹1,00,000 तक ब्याज-मुक्त सहायता।",
+    tile3Action: "लोन जानकारी",
+    tile4Title: "स्वास्थ्य एवं पोषण (Health Care)",
+    tile4Desc: "आशा दीदी और प्राथमिक स्वास्थ्य केंद्र (PHC) से जुड़ी दवाइयों और पोषण की सलाह।",
+    tile4Action: "स्वास्थ्य सलाह",
+    tile5Title: "मौसम और फसल (Weather & Crops)",
+    tile5Desc: "अगले 7 दिनों का मौसम, बारिश का अलर्ट और फसल कटाई के अनुकूल दिन।",
+    tile5Action: "मौसम अलर्ट",
+    tile6Title: "कौशल एवं प्रशिक्षण (Skill Training)",
+    tile6Desc: "शहरी बाजारों की मांग के अनुसार नए डिज़ाइन, रंगाई और पैकेजिंग सीखने के केंद्र।",
+    tile6Action: "ट्रेनिंग खोजें",
+    testimonialQuote: "\"सखी से बोलकर मैंने अपनी 150 बांस की टोकरियाँ सीधे शहर के थोक व्यापारी राजेश जी को ₹205 में बेचीं। पहले बिचौलिए मुझे सिर्फ ₹140 देते थे। सखी ने मेरा मुनाफा 45% बढ़ा दिया!\"",
+    testimonialAuthor: "सुनीता देवी (Sunita Devi)",
+    testimonialRole: "हस्तशिल्प उद्यमी, स्वयं सहायता समूह (ग्रेटर नोएडा)",
+    bottomBannerH3: "आपकी अपनी भाषा में, आपका डिजिटल साथी।",
+    bottomBannerSub: "बिना पढ़े-लिखे या बिना अंग्रेजी जाने, सिर्फ अपनी आवाज़ से पूरा व्यापार चलाएं।",
+    bottomBannerCta: "सखी से बात करें →",
+    voiceHeader: "सखी वॉयस लाइव (Live Conversation)",
+    voiceActiveBadge: "Agora AI Active",
+    voiceListening: "सुन रही है...",
+    voiceSpeaking: "बोल रही है",
+    voiceThinking: "सोच रही है...",
+    voiceSpeakPrompt: "बोलिए / Speak",
+    voiceInterrupt: "सखी को रोकें (Interrupt)",
+    voiceMicTapHint: "माइक दबाकर अपनी बात बोलें...",
+    sessionHudTitle: "सत्र स्मृति (Live Session Memory HUD)",
+    sessionHudActive: "सक्रिय सत्र (Active Session)",
+    hudProduct: "उत्पाद (Product)",
+    hudQuantity: "मात्रा (Quantity)",
+    hudLocation: "स्थान (Location)",
+    hudIntent: "उद्देश्य (Intent)",
+    hudMandiRate: "मंडी भाव (Mandi Rate)",
+    hudBuyer: "खरीदार (Buyer)",
+    hudWaiting: "प्रतीक्षारत...",
+    hudBulk: "थोक (Bulk)",
+    hudRetail: "खुदरा (Retail)",
+    hudNoCheck: "जाँच नहीं हुई",
+    hudNone: "कोई नहीं",
+    replayAudio: "दोबारा सुनें (Replay)",
+    suggestedTitle: "💡 अगला सवाल पूछें (Suggested Questions):",
+    matchedBuyerBadge: "सत्यापित थोक खरीदार मिला",
+    matchedBuyerDemand: "मांग: 150 टोकरियां · बजट: ₹190 – ₹220 / यूनिट",
+    startAgoraCallBtn: "सीधी बात करें (Agora Call)",
+    footerCopyright: "© 2026 सखी वॉयस (Sakhi Voice) — Rural Women Business Empowerment AI.",
+    footerPrivacy: "100% निजी एवं सुरक्षित",
+    footerTech: "Agora Voice AEC/ANS",
+    aiSpeakerLabel: "सखी दीदी (Sakhi AI)",
+    userSpeakerLabel: "आप (You)",
+    resetSuccessText: "नमस्ते दीदी! बातचीत फिर से शुरू हो गई है। आप क्या बेचना चाहती हैं?",
+    resetSuccessTextEn: "Namaste Didi! Reset completed. What would you like to sell?",
+  },
+  en: {
+    appTitle: "Sakhi Voice",
+    appSubtitle: "Voice-First AI Business Agent for Rural Women Entrepreneurs",
+    screen1Tab: "1. Home Page",
+    screen2Tab: "2. Voice Interaction (Voice UI)",
+    trustBadge: "Voice is Private & Secure",
+    demoGuideBtn: "Demo Guide",
+    langToggle: "हिन्दी",
+    heroBadge: "Voice-First Business Companion for Women Entrepreneurs",
+    heroH1Prefix: "Just speak, ",
+    heroH1Highlight: "Sakhi",
+    heroH1Suffix: " will help you.",
+    heroSubhead: "Trade effortlessly in your natural language without typing. Discover fair market prices, connect directly with bulk buyers, and access government grant schemes.",
+    heroCtaPrimary: "Tap Mic to Start Speaking",
+    heroCtaDemo: "Watch 9-Step Judge Demo",
+    trustItem1: "100% Free",
+    trustItem2: "Zero Typing Needed",
+    trustItem3: "Agora RTC Live Voice",
+    avatarTitle: "\"Hello! What would you like to sell today?\"",
+    avatarSub: "Tap the mic button below and start speaking",
+    avatarSpeakBtn: "Speak",
+    quickAccessTitle: "Quick Access Services",
+    quickAccessH2: "What would you like to ask Sakhi?",
+    quickAccessSub: "Click any service tile, and Sakhi will immediately explain everything by voice.",
+    tile1Title: "Farming & Mandi Rates",
+    tile1Desc: "Check verified market prices for handicrafts & agricultural crops so traders cannot underpay you.",
+    tile1Action: "Check Rates",
+    tile2Title: "Government Schemes",
+    tile2Desc: "Simple eligibility terms and application guidance for PM Vishwakarma, Mudra loans, and grant subsidies.",
+    tile2Action: "Explore Schemes",
+    tile3Title: "Loans & Savings (Finance)",
+    tile3Desc: "Collateral-free micro loans from ₹25,000 to ₹1,00,000 for raw materials, inventory, and tools.",
+    tile3Action: "Loan Details",
+    tile4Title: "Healthcare & Nutrition",
+    tile4Desc: "Direct advice on nutrition, ASHA workers, and nearby primary health centers (PHC).",
+    tile4Action: "Health Support",
+    tile5Title: "Weather & Crops",
+    tile5Desc: "7-day localized weather forecast, rain alerts, and ideal craft drying/harvesting days.",
+    tile5Action: "Weather Alerts",
+    tile6Title: "Skill Training & Workshops",
+    tile6Desc: "Learn contemporary urban designs, natural eco-dyeing, and premium packaging methods.",
+    tile6Action: "Find Training",
+    testimonialQuote: "\"By speaking with Sakhi, I sold my 150 bamboo baskets directly to city wholesaler Rajesh ji at ₹205 each. Earlier middlemen only gave me ₹140. Sakhi boosted my profit by 45%!\"",
+    testimonialAuthor: "Sunita Devi",
+    testimonialRole: "Handicraft Artisan, Self-Help Group (Greater Noida)",
+    bottomBannerH3: "Your Digital Business Companion in Your Own Language.",
+    bottomBannerSub: "No reading, writing, or English required — manage your whole business simply with your voice.",
+    bottomBannerCta: "Talk to Sakhi →",
+    voiceHeader: "Sakhi Voice Live (Real-Time Conversation)",
+    voiceActiveBadge: "Agora AI Active",
+    voiceListening: "Listening...",
+    voiceSpeaking: "Speaking...",
+    voiceThinking: "Thinking...",
+    voiceSpeakPrompt: "Speak / बोलिए",
+    voiceInterrupt: "Interrupt Sakhi",
+    voiceMicTapHint: "Tap the microphone and speak your query...",
+    sessionHudTitle: "Live Session Memory HUD (Context State)",
+    sessionHudActive: "Active Session",
+    hudProduct: "Product",
+    hudQuantity: "Quantity",
+    hudLocation: "Location",
+    hudIntent: "Intent",
+    hudMandiRate: "Mandi Rate",
+    hudBuyer: "Buyer",
+    hudWaiting: "Waiting...",
+    hudBulk: "Bulk",
+    hudRetail: "Retail",
+    hudNoCheck: "Not checked",
+    hudNone: "None",
+    replayAudio: "Replay Audio",
+    suggestedTitle: "💡 Suggested Next Questions:",
+    matchedBuyerBadge: "Verified Wholesale Buyer Found",
+    matchedBuyerDemand: "Demand: 150 baskets · Budget: ₹190 – ₹220 / unit",
+    startAgoraCallBtn: "Talk Directly (Agora Call)",
+    footerCopyright: "© 2026 Sakhi Voice — Rural Women Business Empowerment AI.",
+    footerPrivacy: "100% Private & Secure",
+    footerTech: "Agora Voice AEC/ANS",
+    aiSpeakerLabel: "Sakhi Didi (Sakhi AI)",
+    userSpeakerLabel: "You",
+    resetSuccessText: "Hello Didi! Conversation reset. What would you like to sell or explore?",
+    resetSuccessTextEn: "Hello Didi! Conversation reset. What would you like to sell or explore?",
+  }
+};
+
 export default function SakhiVoiceWebUI() {
   // Screen View Switcher: "LANDING" | "VOICE_SCREEN"
   const [currentScreen, setCurrentScreen] = useState<"LANDING" | "VOICE_SCREEN">("LANDING");
 
   // Language: "hi" | "en"
   const [lang, setLang] = useState<"hi" | "en">("hi");
+  const t = I18N[lang];
 
   // Voice Interaction Engine States
   const [voiceState, setVoiceState] = useState<"IDLE" | "LISTENING" | "THINKING" | "SPEAKING">("IDLE");
@@ -113,24 +282,18 @@ export default function SakhiVoiceWebUI() {
       return;
     }
 
-    // Clear previous safety timer
     if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
 
     if (currentAudioRef.current) {
-      try {
-        currentAudioRef.current.pause();
-      } catch (e) {}
+      try { currentAudioRef.current.pause(); } catch (e) {}
       currentAudioRef.current = null;
     }
     if ("speechSynthesis" in window) {
-      try {
-        window.speechSynthesis.cancel();
-      } catch (e) {}
+      try { window.speechSynthesis.cancel(); } catch (e) {}
     }
 
     setVoiceState("SPEAKING");
 
-    // Watchdog timer: ALWAYS restore to IDLE within 6 seconds max
     safetyTimeoutRef.current = setTimeout(() => {
       setVoiceState("IDLE");
       if (onComplete) onComplete();
@@ -148,10 +311,10 @@ export default function SakhiVoiceWebUI() {
     };
 
     audio.onerror = () => {
-      // Fallback to browser Web Speech Synthesis
       if ("speechSynthesis" in window) {
         try {
           const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = lang === "hi" ? "hi-IN" : "en-IN";
           utterance.rate = 0.95;
           utterance.pitch = 1.05;
           utterance.onend = () => {
@@ -176,10 +339,10 @@ export default function SakhiVoiceWebUI() {
     };
 
     audio.play().catch(() => {
-      // Fallback if browser blocked autoplay
       if ("speechSynthesis" in window) {
         try {
           const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = lang === "hi" ? "hi-IN" : "en-IN";
           utterance.onend = () => setVoiceState("IDLE");
           window.speechSynthesis.speak(utterance);
         } catch (e) {
@@ -222,7 +385,6 @@ export default function SakhiVoiceWebUI() {
     setVoiceState("THINKING");
     setCurrentSpeechText(userUtterance);
 
-    // Switch to voice screen
     if (currentScreen === "LANDING") {
       setCurrentScreen("VOICE_SCREEN");
     }
@@ -255,9 +417,9 @@ export default function SakhiVoiceWebUI() {
       }
 
       let dynamicChips = [
-        "मेरे पास 100 हस्तनिर्मित टोकरियाँ हैं",
-        "आज का मंडी भाव क्या है?",
-        "मुद्रा लोन की जानकारी चाहिए"
+        lang === "en" ? "I have 100 handmade baskets" : "मेरे पास 100 हस्तनिर्मित टोकरियाँ हैं",
+        lang === "en" ? "Check today's Mandi rate" : "आज का मंडी भाव क्या है?",
+        lang === "en" ? "Tell me about Mudra loan" : "मुद्रा लोन की जानकारी चाहिए"
       ];
 
       const phase = data.updatedMemory?.conversationPhase;
@@ -265,24 +427,24 @@ export default function SakhiVoiceWebUI() {
 
       if (phase === "PRODUCT_DISCOVERY") {
         if (missing.includes("quantity")) {
-          dynamicChips = ["100", "150 टोकरियाँ हैं", "200 यूनिट्स"];
+          dynamicChips = ["100", lang === "en" ? "150 baskets" : "150 टोकरियाँ हैं", lang === "en" ? "200 units" : "200 यूनिट्स"];
         } else if (missing.includes("sellingIntent")) {
-          dynamicChips = ["हाँ, थोक (Bulk) में", "लोकल मार्केट में", "Bulk mein bechna hai"];
+          dynamicChips = [lang === "en" ? "Yes, wholesale/bulk" : "हाँ, थोक (Bulk) में", lang === "en" ? "In local market" : "लोकल मार्केट में", "Bulk mein bechna hai"];
         } else if (missing.includes("location")) {
-          dynamicChips = ["Greater Noida", "जयपुर", "दिल्ली NCR"];
+          dynamicChips = ["Greater Noida", "Jaipur", "Delhi NCR"];
         }
       } else if (phase === "MARKET_CHECK") {
-        dynamicChips = ["हाँ, मंडी भाव चेक करो", "खरीदार दिखाओ", "रेट ₹220 से शुरू करो"];
+        dynamicChips = [lang === "en" ? "Yes, check market rate" : "हाँ, मंडी भाव चेक करो", lang === "en" ? "Show verified buyers" : "खरीदार दिखाओ", lang === "en" ? "Start rate at ₹220" : "रेट ₹220 से शुरू करो"];
       } else if (phase === "BUYER_DISCOVERY") {
-        dynamicChips = ["राजेश शर्मा से बात करवाओ", "Actually 150 hain", "दूसरे खरीदार दिखाओ"];
+        dynamicChips = [lang === "en" ? "Talk to Rajesh Sharma" : "राजेश शर्मा से बात करवाओ", "Actually 150 hain", lang === "en" ? "Show other buyers" : "दूसरे खरीदार दिखाओ"];
       } else if (phase === "NEGOTIATION") {
-        dynamicChips = ["कॉल लगाओ (Agora Call)", "हाँ, डील पक्की कर दो", "दाम और बढ़वाओ"];
+        dynamicChips = [lang === "en" ? "Start Agora Call" : "कॉल लगाओ (Agora Call)", lang === "en" ? "Confirm deal" : "हाँ, डील पक्की कर दो", lang === "en" ? "Counter-offer more" : "दाम और बढ़वाओ"];
       } else if (phase === "DEAL_CONFIRMATION") {
-        dynamicChips = ["बिजनेस लोन और अनुदान चाहिए", "मुद्रा योजना बताओ", "धन्यवाद सखी"];
+        dynamicChips = [lang === "en" ? "Explore loan & grant support" : "बिजनेस लोन और अनुदान चाहिए", lang === "en" ? "Mudra loan scheme" : "मुद्रा योजना बताओ", lang === "en" ? "Thank you Sakhi" : "धन्यवाद सखी"];
       } else if (phase === "BUSINESS_SUPPORT") {
-        dynamicChips = ["हाँ, सेवा ऑफिसर को डिटेल्स भेज दो", "मुद्रा लोन योजना", "ट्रेनिंग सहायता"];
+        dynamicChips = [lang === "en" ? "Send case to SEWA officer" : "हाँ, सेवा ऑफिसर को डिटेल्स भेज दो", lang === "en" ? "Mudra loan scheme" : "मुद्रा लोन योजना", lang === "en" ? "Skill training" : "ट्रेनिंग सहायता"];
       } else if (phase === "HUMAN_ESCALATION") {
-        dynamicChips = ["धन्यवाद दीदी", "नया संवाद शुरू करें"];
+        dynamicChips = [lang === "en" ? "Thank you Didi" : "धन्यवाद दीदी", lang === "en" ? "Start new conversation" : "नया संवाद शुरू करें"];
       }
 
       const aiMsgId = `ai-${Date.now()}`;
@@ -298,15 +460,16 @@ export default function SakhiVoiceWebUI() {
         },
       ]);
 
-      speakText(data.responseHindiDevanagari || data.responseHinglish, () => {
+      const textToSpeak = lang === "en" ? (data.responseEnglish || data.responseHinglish) : (data.responseHindiDevanagari || data.responseHinglish);
+      speakText(textToSpeak, () => {
         if (data.triggerBuyerCall && data.selectedBuyer) {
           setActiveBuyerCall(data.selectedBuyer);
         }
       });
     } catch (e) {
-      console.warn("Turn processed with local fallback:", e);
+      console.warn("Turn processed with fallback:", e);
       setVoiceState("IDLE");
-      const fallback = "जी दीदी, मैं समझ गई। आप क्या आगे जानना चाहती हैं?";
+      const fallback = lang === "en" ? "I understood Didi. What would you like to explore next?" : "जी दीदी, मैं समझ गई। आप क्या आगे जानना चाहती हैं?";
       speakText(fallback);
     }
   };
@@ -332,7 +495,6 @@ export default function SakhiVoiceWebUI() {
       return;
     }
 
-    // Check for native SpeechRecognition
     if (typeof window !== "undefined") {
       const SpeechRecognition =
         (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -346,7 +508,7 @@ export default function SakhiVoiceWebUI() {
 
           recognition.onstart = () => {
             setVoiceState("LISTENING");
-            setCurrentSpeechText("सखी सुन रही है... (Speak now)");
+            setCurrentSpeechText(lang === "en" ? "Sakhi is listening... (Speak now)" : "सखी सुन रही है... (Speak now)");
           };
 
           recognition.onresult = (event: any) => {
@@ -374,7 +536,7 @@ export default function SakhiVoiceWebUI() {
           recognition.onerror = (err: any) => {
             console.warn("Speech recognition notice:", err);
             setVoiceState("IDLE");
-            setCurrentSpeechText("माइक दबाकर बोलें...");
+            setCurrentSpeechText(t.voiceMicTapHint);
           };
 
           recognition.onend = () => {
@@ -391,7 +553,7 @@ export default function SakhiVoiceWebUI() {
     }
 
     setVoiceState("IDLE");
-    setCurrentSpeechText("कृपया माइक दबाकर बोलें...");
+    setCurrentSpeechText(t.voiceMicTapHint);
   };
 
   return (
@@ -412,14 +574,14 @@ export default function SakhiVoiceWebUI() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-xl text-[#2D1F1B] tracking-tight">
-                  सखी वॉयस
+                  {t.appTitle}
                 </span>
                 <span className="text-xs font-bold text-[#E85D3A] bg-[#E85D3A]/10 px-2.5 py-0.5 rounded-full border border-[#E85D3A]/20">
                   Sakhi Voice
                 </span>
               </div>
               <p className="text-[11px] text-[#8C7B70] font-medium hidden sm:block">
-                ग्रामीण महिला उद्यमियों की आवाज़ सहायक (AI Business Agent)
+                {t.appSubtitle}
               </p>
             </div>
           </div>
@@ -434,7 +596,7 @@ export default function SakhiVoiceWebUI() {
                   : "text-[#2D1F1B] hover:text-[#E85D3A]"
               }`}
             >
-              1. होम पेज (Landing)
+              {t.screen1Tab}
             </button>
             <button
               onClick={() => setCurrentScreen("VOICE_SCREEN")}
@@ -445,7 +607,7 @@ export default function SakhiVoiceWebUI() {
               }`}
             >
               <Mic className="w-3.5 h-3.5" />
-              <span>2. बोलकर बात करें (Voice UI)</span>
+              <span>{t.screen2Tab}</span>
             </button>
           </div>
 
@@ -453,7 +615,7 @@ export default function SakhiVoiceWebUI() {
           <div className="flex items-center gap-2.5">
             <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 text-xs font-bold rounded-full border border-emerald-200">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>आवाज़ सुरक्षित है</span>
+              <span>{t.trustBadge}</span>
             </div>
 
             <button
@@ -461,14 +623,16 @@ export default function SakhiVoiceWebUI() {
               className="px-3.5 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold text-xs rounded-2xl border border-amber-300 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
             >
               <Sparkles className="w-3.5 h-3.5 text-[#E85D3A]" />
-              <span>डेमो गाइड</span>
+              <span>{t.demoGuideBtn}</span>
             </button>
 
             <button
               onClick={() => setLang((prev) => (prev === "hi" ? "en" : "hi"))}
-              className="px-3 py-1.5 bg-white text-[#2D1F1B] font-bold text-xs rounded-2xl border border-[#F2E4D4] hover:border-[#E85D3A] transition-all cursor-pointer shadow-xs"
+              className="px-3.5 py-1.5 bg-[#E85D3A] text-white font-extrabold text-xs rounded-2xl shadow-sm hover:bg-[#C94726] transition-all cursor-pointer flex items-center gap-1"
+              title="Change Language"
             >
-              {lang === "hi" ? "हिन्दी" : "English"}
+              <span>🌐</span>
+              <span>{t.langToggle}</span>
             </button>
           </div>
         </div>
@@ -485,16 +649,17 @@ export default function SakhiVoiceWebUI() {
             <div className="lg:col-span-7 space-y-6 text-left">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#E85D3A]/10 text-[#E85D3A] text-xs sm:text-sm font-bold border border-[#E85D3A]/20">
                 <span className="w-2 h-2 rounded-full bg-[#E85D3A] animate-ping" />
-                <span>ग्रामीण महिलाओं के लिए वॉयस-फर्स्ट बिज़नेस साथी</span>
+                <span>{t.heroBadge}</span>
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-[52px] font-black text-[#2D1F1B] leading-[1.15] tracking-tight">
-                सिर्फ बोलिए, <br />
-                <span className="text-[#E85D3A]">सखी</span> आपकी मदद करेगी।
+                {t.heroH1Prefix} <br />
+                <span className="text-[#E85D3A]">{t.heroH1Highlight}</span>
+                {t.heroH1Suffix}
               </h1>
 
               <p className="text-lg sm:text-xl text-[#8C7B70] leading-relaxed font-medium max-w-xl">
-                बिना टाइप किए, अपनी सरल भाषा में व्यापार करें। सही मंडी भाव जानें, सीधे थोक खरीदार खोजें और सरकारी लोन अनुदान पाएं।
+                {t.heroSubhead}
               </p>
 
               {/* CTA Row */}
@@ -506,7 +671,7 @@ export default function SakhiVoiceWebUI() {
                   className="btn-rural-primary flex items-center gap-3 text-lg cursor-pointer"
                 >
                   <Mic className="w-6 h-6 animate-bounce" />
-                  <span>माइक दबाकर बात शुरू करें</span>
+                  <span>{t.heroCtaPrimary}</span>
                 </button>
 
                 <button
@@ -514,7 +679,7 @@ export default function SakhiVoiceWebUI() {
                   className="px-6 py-4 rounded-full bg-white text-[#2D1F1B] font-bold text-base border-2 border-[#F2E4D4] hover:border-[#E85D3A] transition-all flex items-center gap-2 cursor-pointer shadow-sm hover:scale-105"
                 >
                   <Sparkles className="w-5 h-5 text-[#F4C430]" />
-                  <span>9-स्टेप जज डेमो देखें</span>
+                  <span>{t.heroCtaDemo}</span>
                 </button>
               </div>
 
@@ -522,15 +687,15 @@ export default function SakhiVoiceWebUI() {
               <div className="flex flex-wrap items-center gap-6 pt-2 text-xs sm:text-sm text-[#8C7B70] font-semibold">
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  100% निशुल्क
+                  {t.trustItem1}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  शून्य टाइपिंग
+                  {t.trustItem2}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  Agora RTC Live Voice
+                  {t.trustItem3}
                 </span>
               </div>
             </div>
@@ -546,10 +711,10 @@ export default function SakhiVoiceWebUI() {
                 </div>
 
                 <h3 className="font-extrabold text-xl text-[#2D1F1B] mb-1">
-                  "नमस्ते! आप क्या बेचना चाहती हैं?"
+                  {t.avatarTitle}
                 </h3>
                 <p className="text-xs text-[#8C7B70] mb-5">
-                  नीचे दिए गए बटन पर टैप करें और बोलें
+                  {t.avatarSub}
                 </p>
 
                 {/* Animated Pulsing Voice Mic Button */}
@@ -560,7 +725,7 @@ export default function SakhiVoiceWebUI() {
                   className="w-24 h-24 rounded-full bg-gradient-to-tr from-[#E85D3A] via-[#F4C430] to-[#E85D3A] text-white flex flex-col items-center justify-center animate-mic-pulse cursor-pointer transition-transform hover:scale-110 shadow-lg"
                 >
                   <Mic className="w-9 h-9" />
-                  <span className="text-[10px] font-extrabold uppercase mt-1">बोलिए</span>
+                  <span className="text-[10px] font-extrabold uppercase mt-1">{t.avatarSpeakBtn}</span>
                 </button>
               </div>
             </div>
@@ -571,14 +736,14 @@ export default function SakhiVoiceWebUI() {
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-[#F2E4D4] pb-4">
               <div>
                 <span className="text-xs font-extrabold text-[#E85D3A] uppercase tracking-wider block mb-1">
-                  त्वरित सेवाएं (Quick Access)
+                  {t.quickAccessTitle}
                 </span>
                 <h2 className="text-2xl sm:text-3xl font-extrabold text-[#2D1F1B] tracking-tight">
-                  आप सखी से क्या पूछ सकती हैं?
+                  {t.quickAccessH2}
                 </h2>
               </div>
               <p className="text-xs text-[#8C7B70] max-w-sm">
-                किसी भी टाइल पर क्लिक करें, सखी तुरंत बोलकर पूरी जानकारी समझाएगी।
+                {t.quickAccessSub}
               </p>
             </div>
 
@@ -587,7 +752,7 @@ export default function SakhiVoiceWebUI() {
               <div
                 onClick={() => {
                   setCurrentScreen("VOICE_SCREEN");
-                  handleProcessTurn("आज हस्तनिर्मित टोकरियों और फसलों का मंडी भाव क्या है?");
+                  handleProcessTurn(lang === "en" ? "What is the latest mandi rate for handmade craft baskets?" : "आज हस्तनिर्मित टोकरियों और फसलों का मंडी भाव क्या है?");
                 }}
                 className="rural-card p-6 flex flex-col justify-between cursor-pointer group"
               >
@@ -596,14 +761,14 @@ export default function SakhiVoiceWebUI() {
                     🌾
                   </div>
                   <h3 className="font-extrabold text-lg text-[#2D1F1B] mb-1.5 group-hover:text-[#E85D3A] transition-colors">
-                    खेती और मंडी भाव (Mandi Rates)
+                    {t.tile1Title}
                   </h3>
                   <p className="text-sm text-[#8C7B70] leading-relaxed">
-                    हस्तशिल्प और फसलों के ताज़ा सरकारी मंडी दाम जानें, ताकि कोई व्यापारी कम दाम न दे सके।
+                    {t.tile1Desc}
                   </p>
                 </div>
                 <div className="pt-4 mt-4 border-t border-[#F2E4D4] flex items-center justify-between text-xs font-bold text-[#E85D3A]">
-                  <span>भाव चेक करें</span>
+                  <span>{t.tile1Action}</span>
                   <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
@@ -612,7 +777,7 @@ export default function SakhiVoiceWebUI() {
               <div
                 onClick={() => {
                   setCurrentScreen("VOICE_SCREEN");
-                  handleProcessTurn("महिला उद्यमियों के लिए सरकारी अनुदान योजनाएं बताइए।");
+                  handleProcessTurn(lang === "en" ? "Tell me about government grant and subsidy schemes for women." : "महिला उद्यमियों के लिए सरकारी अनुदान योजनाएं बताइए।");
                 }}
                 className="rural-card p-6 flex flex-col justify-between cursor-pointer group"
               >
@@ -621,14 +786,14 @@ export default function SakhiVoiceWebUI() {
                     🏛️
                   </div>
                   <h3 className="font-extrabold text-lg text-[#2D1F1B] mb-1.5 group-hover:text-[#2B7A78] transition-colors">
-                    सरकारी योजनाएं (Govt Schemes)
+                    {t.tile2Title}
                   </h3>
                   <p className="text-sm text-[#8C7B70] leading-relaxed">
-                    पीएम विश्वकर्मा, मुद्रा योजना और महिला सामर्थ्य अनुदान की आसान शर्तें और फॉर्म की मदद।
+                    {t.tile2Desc}
                   </p>
                 </div>
                 <div className="pt-4 mt-4 border-t border-[#F2E4D4] flex items-center justify-between text-xs font-bold text-[#2B7A78]">
-                  <span>योजनाएं देखें</span>
+                  <span>{t.tile2Action}</span>
                   <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
@@ -637,7 +802,7 @@ export default function SakhiVoiceWebUI() {
               <div
                 onClick={() => {
                   setCurrentScreen("VOICE_SCREEN");
-                  handleProcessTurn("स्वयं सहायता समूह और बिज़नेस लोन कैसे मिलेगा?");
+                  handleProcessTurn(lang === "en" ? "How can I get a self-help group business expansion loan?" : "स्वयं सहायता समूह और बिज़नेस लोन कैसे मिलेगा?");
                 }}
                 className="rural-card p-6 flex flex-col justify-between cursor-pointer group"
               >
@@ -646,14 +811,14 @@ export default function SakhiVoiceWebUI() {
                     💰
                   </div>
                   <h3 className="font-extrabold text-lg text-[#2D1F1B] mb-1.5 group-hover:text-amber-800 transition-colors">
-                    लोन और बचत (Finance & Loans)
+                    {t.tile3Title}
                   </h3>
                   <p className="text-sm text-[#8C7B70] leading-relaxed">
-                    कच्चे माल और मशीनरी के लिए ₹25,000 से ₹1,00,000 तक ब्याज-मुक्त सहायता।
+                    {t.tile3Desc}
                   </p>
                 </div>
                 <div className="pt-4 mt-4 border-t border-[#F2E4D4] flex items-center justify-between text-xs font-bold text-amber-800">
-                  <span>लोन जानकारी</span>
+                  <span>{t.tile3Action}</span>
                   <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
@@ -662,7 +827,7 @@ export default function SakhiVoiceWebUI() {
               <div
                 onClick={() => {
                   setCurrentScreen("VOICE_SCREEN");
-                  handleProcessTurn("परिवार के स्वास्थ्य और पास के अस्पताल की सलाह दीजिए।");
+                  handleProcessTurn(lang === "en" ? "Provide healthcare and local clinic advice for my family." : "परिवार के स्वास्थ्य और पास के अस्पताल की सलाह दीजिए।");
                 }}
                 className="rural-card p-6 flex flex-col justify-between cursor-pointer group"
               >
@@ -671,14 +836,14 @@ export default function SakhiVoiceWebUI() {
                     🩺
                   </div>
                   <h3 className="font-extrabold text-lg text-[#2D1F1B] mb-1.5 group-hover:text-rose-700 transition-colors">
-                    स्वास्थ्य एवं पोषण (Health Care)
+                    {t.tile4Title}
                   </h3>
                   <p className="text-sm text-[#8C7B70] leading-relaxed">
-                    आशा दीदी और प्राथमिक स्वास्थ्य केंद्र (PHC) से जुड़ी दवाइयों और पोषण की सलाह।
+                    {t.tile4Desc}
                   </p>
                 </div>
                 <div className="pt-4 mt-4 border-t border-[#F2E4D4] flex items-center justify-between text-xs font-bold text-rose-700">
-                  <span>स्वास्थ्य सलाह</span>
+                  <span>{t.tile4Action}</span>
                   <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
@@ -687,7 +852,7 @@ export default function SakhiVoiceWebUI() {
               <div
                 onClick={() => {
                   setCurrentScreen("VOICE_SCREEN");
-                  handleProcessTurn("आज का मौसम और बारिश का अनुमान क्या है?");
+                  handleProcessTurn(lang === "en" ? "What is the weather and rain forecast for the coming week?" : "आज का मौसम और बारिश का अनुमान क्या है?");
                 }}
                 className="rural-card p-6 flex flex-col justify-between cursor-pointer group"
               >
@@ -696,14 +861,14 @@ export default function SakhiVoiceWebUI() {
                     ☀️
                   </div>
                   <h3 className="font-extrabold text-lg text-[#2D1F1B] mb-1.5 group-hover:text-sky-700 transition-colors">
-                    मौसम और फसल (Weather & Crops)
+                    {t.tile5Title}
                   </h3>
                   <p className="text-sm text-[#8C7B70] leading-relaxed">
-                    अगले 7 दिनों का मौसम, बारिश का अलर्ट और फसल कटाई के अनुकूल दिन।
+                    {t.tile5Desc}
                   </p>
                 </div>
                 <div className="pt-4 mt-4 border-t border-[#F2E4D4] flex items-center justify-between text-xs font-bold text-sky-700">
-                  <span>मौसम अलर्ट</span>
+                  <span>{t.tile5Action}</span>
                   <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
@@ -712,7 +877,7 @@ export default function SakhiVoiceWebUI() {
               <div
                 onClick={() => {
                   setCurrentScreen("VOICE_SCREEN");
-                  handleProcessTurn("हस्तशिल्प और पैकेजिंग की ट्रेनिंग कहाँ से मिलेगी?");
+                  handleProcessTurn(lang === "en" ? "Where can I find handicraft design and packaging training?" : "हस्तशिल्प और पैकेजिंग की ट्रेनिंग कहाँ से मिलेगी?");
                 }}
                 className="rural-card p-6 flex flex-col justify-between cursor-pointer group"
               >
@@ -721,14 +886,14 @@ export default function SakhiVoiceWebUI() {
                     📚
                   </div>
                   <h3 className="font-extrabold text-lg text-[#2D1F1B] mb-1.5 group-hover:text-purple-700 transition-colors">
-                    कौशल एवं प्रशिक्षण (Skill Training)
+                    {t.tile6Title}
                   </h3>
                   <p className="text-sm text-[#8C7B70] leading-relaxed">
-                    शहरी बाजारों की मांग के अनुसार नए डिज़ाइन, रंगाई और पैकेजिंग सीखने के केंद्र।
+                    {t.tile6Desc}
                   </p>
                 </div>
                 <div className="pt-4 mt-4 border-t border-[#F2E4D4] flex items-center justify-between text-xs font-bold text-purple-700">
-                  <span>ट्रेनिंग खोजें</span>
+                  <span>{t.tile6Action}</span>
                   <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
@@ -745,7 +910,7 @@ export default function SakhiVoiceWebUI() {
               </div>
 
               <blockquote className="text-xl sm:text-2xl font-bold text-[#2D1F1B] leading-relaxed italic">
-                "सखी से बोलकर मैंने अपनी 150 बांस की टोकरियाँ सीधे शहर के थोक व्यापारी राजेश जी को ₹205 में बेचीं। पहले बिचौलिए मुझे सिर्फ ₹140 देते थे। सखी ने मेरा मुनाफा 45% बढ़ा दिया!"
+                {t.testimonialQuote}
               </blockquote>
 
               <div className="flex items-center gap-4 pt-2">
@@ -754,10 +919,10 @@ export default function SakhiVoiceWebUI() {
                 </div>
                 <div>
                   <h4 className="font-extrabold text-base text-[#2D1F1B]">
-                    सुनीता देवी (Sunita Devi)
+                    {t.testimonialAuthor}
                   </h4>
                   <p className="text-xs text-[#8C7B70] font-medium">
-                    हस्तशिल्प उद्यमी, स्वयं सहायता समूह (ग्रेटर नोएडा)
+                    {t.testimonialRole}
                   </p>
                 </div>
               </div>
@@ -768,10 +933,10 @@ export default function SakhiVoiceWebUI() {
           <section className="bg-gradient-to-r from-[#2B7A78] to-[#1E5654] rounded-[32px] p-8 text-white flex flex-col sm:flex-row items-center justify-between gap-6 shadow-md">
             <div className="text-left space-y-1">
               <h3 className="text-2xl font-extrabold">
-                आपकी अपनी भाषा में, आपका डिजिटल साथी।
+                {t.bottomBannerH3}
               </h3>
               <p className="text-sm text-teal-100 font-medium">
-                बिना पढ़े-लिखे या बिना अंग्रेजी जाने, सिर्फ अपनी आवाज़ से पूरा व्यापार चलाएं।
+                {t.bottomBannerSub}
               </p>
             </div>
 
@@ -781,7 +946,7 @@ export default function SakhiVoiceWebUI() {
               }}
               className="px-8 py-4 bg-white hover:bg-teal-50 text-[#2B7A78] font-extrabold text-base rounded-full shadow-lg transition-transform hover:scale-105 cursor-pointer whitespace-nowrap"
             >
-              सखी से बात करें →
+              {t.bottomBannerCta}
             </button>
           </section>
         </main>
@@ -799,14 +964,14 @@ export default function SakhiVoiceWebUI() {
                 🌸
               </div>
               <span className="font-extrabold text-sm text-[#2D1F1B]">
-                सखी वॉयस लाइव (Live Conversation)
+                {t.voiceHeader}
               </span>
             </div>
 
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-3 py-1 rounded-full flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                Agora AI Active
+                {t.voiceActiveBadge}
               </span>
 
               <button
@@ -815,17 +980,17 @@ export default function SakhiVoiceWebUI() {
                     {
                       id: "reset-1",
                       sender: "AI",
-                      textHindi: "नमस्ते दीदी! बातचीत फिर से शुरू हो गई है। आप क्या बेचना चाहती हैं?",
-                      textEnglish: "Namaste Didi! Reset completed. What would you like to sell?",
+                      textHindi: t.resetSuccessText,
+                      textEnglish: t.resetSuccessTextEn,
                       timestamp: "अभी",
-                      suggestedChips: ["मेरे पास 100 टोकरियाँ हैं", "मंडी भाव बताओ", "लोन सहायता चाहिए"],
+                      suggestedChips: lang === "en" ? ["I have 100 baskets", "Check mandi rates", "Need loan support"] : ["मेरे पास 100 टोकरियाँ हैं", "मंडी भाव बताओ", "लोन सहायता चाहिए"],
                     },
                   ]);
                   setBusinessMemory(INITIAL_BUSINESS_MEMORY);
                   setVoiceState("IDLE");
                 }}
                 className="p-2 rounded-full hover:bg-white text-[#8C7B70] border border-transparent hover:border-[#F2E4D4] transition-all cursor-pointer"
-                title="नया संवाद शुरू करें"
+                title="Reset conversation"
               >
                 <RefreshCw className="w-4 h-4" />
               </button>
@@ -859,22 +1024,22 @@ export default function SakhiVoiceWebUI() {
                 {voiceState === "LISTENING" ? (
                   <>
                     <Mic className="w-10 h-10 animate-bounce" />
-                    <span className="text-[11px] font-extrabold uppercase mt-1">सुन रही है...</span>
+                    <span className="text-[11px] font-extrabold uppercase mt-1">{t.voiceListening}</span>
                   </>
                 ) : voiceState === "SPEAKING" ? (
                   <>
                     <Radio className="w-10 h-10 animate-spin" />
-                    <span className="text-[11px] font-extrabold uppercase mt-1">बोल रही है</span>
+                    <span className="text-[11px] font-extrabold uppercase mt-1">{t.voiceSpeaking}</span>
                   </>
                 ) : voiceState === "THINKING" ? (
                   <>
                     <Loader2 className="w-10 h-10 animate-spin" />
-                    <span className="text-[11px] font-extrabold uppercase mt-1">सोच रही है...</span>
+                    <span className="text-[11px] font-extrabold uppercase mt-1">{t.voiceThinking}</span>
                   </>
                 ) : (
                   <>
                     <Mic className="w-10 h-10" />
-                    <span className="text-[11px] font-extrabold uppercase mt-1">बोलिए / Speak</span>
+                    <span className="text-[11px] font-extrabold uppercase mt-1">{t.voiceSpeakPrompt}</span>
                   </>
                 )}
               </button>
@@ -895,13 +1060,13 @@ export default function SakhiVoiceWebUI() {
                 className="mt-3 px-4 py-1.5 bg-rose-600 text-white font-bold text-xs rounded-full shadow-md flex items-center gap-1.5 cursor-pointer hover:bg-rose-700"
               >
                 <Square className="w-3 h-3 fill-current" />
-                <span>सखी को रोकें (Interrupt)</span>
+                <span>{t.voiceInterrupt}</span>
               </button>
             )}
 
             {/* Subtitle / Speech Bubble */}
             <p className="mt-3 text-xs sm:text-sm font-semibold text-[#8C7B70] italic max-w-md">
-              {currentSpeechText ? `"${currentSpeechText}"` : "माइक दबाकर अपनी बात बोलें..."}
+              {currentSpeechText ? `"${currentSpeechText}"` : t.voiceMicTapHint}
             </p>
           </div>
 
@@ -911,62 +1076,62 @@ export default function SakhiVoiceWebUI() {
               <div className="flex items-center gap-2">
                 <span className="text-sm">🧠</span>
                 <span className="font-extrabold text-xs text-[#2D1F1B] uppercase tracking-wider">
-                  सत्र स्मृति (Live Session Memory HUD)
+                  {t.sessionHudTitle}
                 </span>
               </div>
               <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full">
-                सक्रिय सत्र (Active Session)
+                {t.sessionHudActive}
               </span>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
               <div className="bg-[#FFF8F0] p-2.5 rounded-2xl border border-[#F2E4D4]">
-                <span className="text-[10px] font-bold text-[#8C7B70] block uppercase">उत्पाद (Product)</span>
+                <span className="text-[10px] font-bold text-[#8C7B70] block uppercase">{t.hudProduct}</span>
                 <span className="font-extrabold text-[#2D1F1B] truncate block mt-0.5">
-                  {businessMemory.product || "प्रतीक्षारत..."}
+                  {businessMemory.product || t.hudWaiting}
                 </span>
               </div>
 
               <div className="bg-[#FFF8F0] p-2.5 rounded-2xl border border-[#F2E4D4]">
-                <span className="text-[10px] font-bold text-[#8C7B70] block uppercase">मात्रा (Quantity)</span>
+                <span className="text-[10px] font-bold text-[#8C7B70] block uppercase">{t.hudQuantity}</span>
                 <span className="font-extrabold text-[#2D1F1B] truncate block mt-0.5">
-                  {businessMemory.quantity ? `${businessMemory.quantity} यूनिट्स` : "प्रतीक्षारत..."}
+                  {businessMemory.quantity ? `${businessMemory.quantity} units` : t.hudWaiting}
                 </span>
               </div>
 
               <div className="bg-[#FFF8F0] p-2.5 rounded-2xl border border-[#F2E4D4]">
-                <span className="text-[10px] font-bold text-[#8C7B70] block uppercase">स्थान (Location)</span>
+                <span className="text-[10px] font-bold text-[#8C7B70] block uppercase">{t.hudLocation}</span>
                 <span className="font-extrabold text-[#2D1F1B] truncate block mt-0.5">
-                  {businessMemory.location || "प्रतीक्षारत..."}
+                  {businessMemory.location || t.hudWaiting}
                 </span>
               </div>
 
               <div className="bg-[#FFF8F0] p-2.5 rounded-2xl border border-[#F2E4D4]">
-                <span className="text-[10px] font-bold text-[#8C7B70] block uppercase">उद्देश्य (Intent)</span>
+                <span className="text-[10px] font-bold text-[#8C7B70] block uppercase">{t.hudIntent}</span>
                 <span className="font-extrabold text-[#2D1F1B] truncate block mt-0.5">
                   {businessMemory.sellingIntent
                     ? businessMemory.sellingIntent === "bulk"
-                      ? "थोक (Bulk)"
-                      : "खुदरा (Retail)"
-                    : "प्रतीक्षारत..."}
+                      ? t.hudBulk
+                      : t.hudRetail
+                    : t.hudWaiting}
                 </span>
               </div>
 
               <div className="bg-[#FFF8F0] p-2.5 rounded-2xl border border-[#F2E4D4]">
-                <span className="text-[10px] font-bold text-[#8C7B70] block uppercase">मंडी भाव (Mandi Rate)</span>
+                <span className="text-[10px] font-bold text-[#8C7B70] block uppercase">{t.hudMandiRate}</span>
                 <span className="font-extrabold text-[#2D1F1B] truncate block mt-0.5">
                   {businessMemory.marketPriceRange
                     ? `₹${businessMemory.marketPriceRange.min}–₹${businessMemory.marketPriceRange.max}`
-                    : "जाँच नहीं हुई"}
+                    : t.hudNoCheck}
                 </span>
               </div>
 
               <div className="bg-[#FFF8F0] p-2.5 rounded-2xl border border-[#F2E4D4]">
-                <span className="text-[10px] font-bold text-[#8C7B70] block uppercase">खरीदार (Buyer)</span>
+                <span className="text-[10px] font-bold text-[#8C7B70] block uppercase">{t.hudBuyer}</span>
                 <span className="font-extrabold text-[#2D1F1B] truncate block mt-0.5">
                   {businessMemory.matchedBuyers && businessMemory.matchedBuyers.length > 0
                     ? businessMemory.matchedBuyers[0].name
-                    : "कोई नहीं"}
+                    : t.hudNone}
                 </span>
               </div>
             </div>
@@ -976,6 +1141,8 @@ export default function SakhiVoiceWebUI() {
           <div className="w-full space-y-4 text-left">
             {messages.map((msg) => {
               const isAI = msg.sender === "AI";
+              const primaryText = lang === "en" ? (msg.textEnglish || msg.textHindi) : (msg.textHindi || msg.textEnglish);
+              const subtitleText = lang === "en" ? msg.textHindi : msg.textEnglish;
 
               return (
                 <div
@@ -991,36 +1158,38 @@ export default function SakhiVoiceWebUI() {
                     <div className="flex items-center gap-2">
                       <span className="text-xl">{isAI ? "🌸" : "👩🏽"}</span>
                       <span className="font-extrabold text-sm text-[#2D1F1B]">
-                        {isAI ? "सखी दीदी (Sakhi AI)" : "आप (You)"}
+                        {isAI ? t.aiSpeakerLabel : t.userSpeakerLabel}
                       </span>
                       <span className="text-xs text-[#8C7B70]">· {msg.timestamp}</span>
                     </div>
 
                     {isAI && (
                       <button
-                        onClick={() => speakText(msg.textHindi)}
+                        onClick={() => speakText(primaryText)}
                         className="px-3 py-1.5 bg-[#FFF8F0] hover:bg-[#FFEEDB] text-[#E85D3A] text-xs font-bold rounded-full border border-[#F2E4D4] flex items-center gap-1.5 transition-all cursor-pointer"
                       >
                         <Volume2 className="w-3.5 h-3.5" />
-                        <span>दोबारा सुनें (Replay)</span>
+                        <span>{t.replayAudio}</span>
                       </button>
                     )}
                   </div>
 
                   {/* Big Readable Response Text */}
                   <p className="text-xl sm:text-2xl font-bold text-[#2D1F1B] leading-relaxed">
-                    {msg.textHindi}
+                    {primaryText}
                   </p>
 
-                  <p className="text-sm font-medium text-[#8C7B70] mt-1.5 italic">
-                    {msg.textEnglish}
-                  </p>
+                  {subtitleText && (
+                    <p className="text-sm font-medium text-[#8C7B70] mt-1.5 italic">
+                      {subtitleText}
+                    </p>
+                  )}
 
                   {/* Suggested Follow-Up Question Chips */}
                   {msg.suggestedChips && msg.suggestedChips.length > 0 && (
                     <div className="mt-5 pt-4 border-t border-[#F2E4D4]">
                       <span className="text-xs font-bold text-[#8C7B70] uppercase tracking-wider block mb-2">
-                        💡 अगला सवाल पूछें (Suggested Questions):
+                        {t.suggestedTitle}
                       </span>
                       <div className="flex flex-wrap gap-2">
                         {msg.suggestedChips.map((chip, idx) => (
@@ -1049,13 +1218,13 @@ export default function SakhiVoiceWebUI() {
                 </div>
                 <div>
                   <span className="text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md">
-                    सत्यापित थोक खरीदार मिला
+                    {t.matchedBuyerBadge}
                   </span>
                   <h4 className="font-extrabold text-base text-[#2D1F1B] mt-0.5">
                     {businessMemory.matchedBuyers[0].name} ({businessMemory.matchedBuyers[0].organization})
                   </h4>
                   <p className="text-xs text-[#8C7B70]">
-                    मांग: 150 टोकरियां · बजट: ₹190 – ₹220 / यूनिट
+                    {t.matchedBuyerDemand}
                   </p>
                 </div>
               </div>
@@ -1068,7 +1237,7 @@ export default function SakhiVoiceWebUI() {
                 className="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-full shadow-md flex items-center gap-2 cursor-pointer whitespace-nowrap hover:scale-105 transition-all"
               >
                 <PhoneCall className="w-4 h-4 animate-pulse" />
-                <span>सीधी बात करें (Agora Call)</span>
+                <span>{t.startAgoraCallBtn}</span>
               </button>
             </div>
           )}
@@ -1110,11 +1279,11 @@ export default function SakhiVoiceWebUI() {
           agreedPrice={pendingDealData.agreedPrice}
           onConfirm={() => {
             setShowDealConfirmModal(false);
-            handleProcessTurn("हाँ सखी, डील पक्की कर दो।");
+            handleProcessTurn(lang === "en" ? "Yes Sakhi, confirm the deal." : "हाँ सखी, डील पक्की कर दो।");
           }}
           onNegotiateMore={() => {
             setShowDealConfirmModal(false);
-            handleProcessTurn("दाम और बढ़वाओ।");
+            handleProcessTurn(lang === "en" ? "Increase the offer price." : "दाम और बढ़वाओ।");
           }}
           onCancel={() => setShowDealConfirmModal(false)}
           lang={lang}
@@ -1174,13 +1343,13 @@ export default function SakhiVoiceWebUI() {
           ======================================================== */}
       <footer className="border-t border-[#F2E4D4] py-6 px-4 text-center text-xs text-[#8C7B70] bg-[#FFF8F0]">
         <div className="max-w-[1280px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>© 2026 सखी वॉयस (Sakhi Voice) — Rural Women Business Empowerment AI.</p>
+          <p>{t.footerCopyright}</p>
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1 text-emerald-800 font-bold">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              100% निजी एवं सुरक्षित
+              {t.footerPrivacy}
             </span>
-            <span>Agora Voice AEC/ANS</span>
+            <span>{t.footerTech}</span>
           </div>
         </div>
       </footer>
