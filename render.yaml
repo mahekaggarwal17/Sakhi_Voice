@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: sakhi-voice
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
+      - key: NEXT_PUBLIC_AGORA_APP_ID
+        value: b6bfc5ea3dac445cb951beb9d373ddc5
+      - key: AGORA_APP_ID
+        value: b6bfc5ea3dac445cb951beb9d373ddc5
+      - key: AGORA_APP_CERTIFICATE
+        value: c7d61b3b003f4f5d97f40c783f37116d
+      - key: AGORA_CUSTOMER_ID
+        value: 4484034496dd4b56bf6e53d2d8a195cc
+      - key: AGORA_CUSTOMER_SECRET
+        value: ae3b66db366744b88e51df1f32d3a2e1
