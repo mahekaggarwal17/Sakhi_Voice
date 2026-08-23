@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Mic, Radio, Loader2, Square, Sparkles, AlertCircle, Volume2 } from "lucide-react";
+import { Mic, Radio, Loader2, Square, Sparkles, AlertCircle, Volume2, ArrowRight } from "lucide-react";
 import { AudioWaveform } from "./AudioWaveform";
 
 export type AgentVoiceState = "IDLE" | "LISTENING" | "THINKING" | "SPEAKING" | "TOOL_CALLING" | "ESCALATING";
@@ -33,130 +33,122 @@ export const VoiceController: React.FC<VoiceControllerProps> = ({
   const isToolCalling = voiceState === "TOOL_CALLING";
   const isEscalating = voiceState === "ESCALATING";
 
-  // Calculate audio-reactive scale boost
-  const scaleBoost = isListening || isSpeaking ? 1 + (volumeLevel / 100) * 0.12 : 1;
+  const scaleBoost = isListening || isSpeaking ? 1 + (volumeLevel / 100) * 0.15 : 1;
 
   return (
     <div className="w-full flex flex-col items-center text-center">
-      {/* Dynamic Status Pill */}
-      <div className="mb-3.5">
+      {/* Active State Pill */}
+      <div className="mb-4">
         {isListening && (
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100 text-emerald-950 text-xs sm:text-sm font-bold border border-emerald-300 shadow-sm animate-pulse">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/40 shadow-emerald-glow animate-pulse">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             {lang === "hi" ? "सखी सुन रही है (Agora Voice Live)..." : "Sakhi is Listening (Agora Live)..."}
           </span>
         )}
         {isThinking && (
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-100 text-amber-950 text-xs sm:text-sm font-bold border border-amber-300 shadow-sm">
-            <Loader2 className="w-4 h-4 animate-spin text-amber-700" />
+          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 text-white text-xs font-bold border border-white/20">
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
             {lang === "hi" ? "सखी सोच रही है (Reasoning Engine)..." : "Sakhi is reasoning..."}
           </span>
         )}
         {isSpeaking && (
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-100 text-orange-950 text-xs sm:text-sm font-bold border border-orange-300 shadow-sm">
-            <Radio className="w-4 h-4 animate-pulse text-[#c05b3f]" />
+          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/40 shadow-emerald-glow">
+            <Radio className="w-3.5 h-3.5 animate-pulse text-emerald-400" />
             {lang === "hi" ? "सखी बोल रही है (Agora Voice AI)" : "Sakhi is Speaking (Agora Voice AI)"}
           </span>
         )}
         {isToolCalling && (
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-100 text-indigo-950 text-xs sm:text-sm font-bold border border-indigo-300 shadow-sm">
-            <Sparkles className="w-4 h-4 animate-spin text-indigo-700" />
-            {lang === "hi" ? "मंडी रेट एवं खरीदार टूल सक्रिय..." : "Executing external data tool..."}
+          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-zinc-800 text-emerald-400 text-xs font-bold border border-emerald-500/30">
+            <Sparkles className="w-3.5 h-3.5 animate-spin" />
+            {lang === "hi" ? "मंडी रेट टूल सक्रिय..." : "Executing external data tool..."}
           </span>
         )}
         {isEscalating && (
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-100 text-purple-950 text-xs sm:text-sm font-bold border border-purple-300 shadow-sm">
-            <Radio className="w-4 h-4 text-purple-700" />
+          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-950/80 text-purple-300 text-xs font-bold border border-purple-500/40">
+            <Radio className="w-3.5 h-3.5 text-purple-400" />
             {lang === "hi" ? "काउंसलर से केस कनेक्ट हो रहा है..." : "Connecting with human counselor..."}
           </span>
         )}
         {voiceState === "IDLE" && (
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#EFE3D3] text-[#553822] text-xs sm:text-sm font-semibold border border-[#DECDBC] shadow-xs">
-            <Mic className="w-4 h-4 text-[#c05b3f]" />
-            {lang === "hi" ? "माइक दबाकर बोलें (Zero-Typing UI)" : "Tap the Sakhi Orb to Speak in Hinglish"}
+          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 text-zinc-400 text-xs font-medium border border-white/10">
+            <Mic className="w-3.5 h-3.5 text-emerald-400" />
+            {lang === "hi" ? "माइक दबाकर बात शुरू करें (Zero-Typing)" : "Tap the Glass Orb to Speak in Hinglish"}
           </span>
         )}
       </div>
 
-      {/* Central Hero: "Sakhi Orb" (SVG + Audio Reactive Canvas) */}
+      {/* Central Hero: Glass Voice Orb */}
       <div className="relative flex items-center justify-center my-3">
-        {/* Subtle Indian Geometric Warli / Madhubani Sunburst SVG Motifs */}
-        <div className="absolute w-44 h-44 sm:w-52 sm:h-52 rounded-full pointer-events-none opacity-20">
-          <svg viewBox="0 0 100 100" className="w-full h-full animate-[spin_60s_linear_infinite]">
-            <circle cx="50" cy="50" r="48" fill="none" stroke="#c05b3f" strokeWidth="0.75" strokeDasharray="3 3" />
-            <circle cx="50" cy="50" r="42" fill="none" stroke="#f59e0b" strokeWidth="0.5" />
-            <circle cx="50" cy="50" r="36" fill="none" stroke="#312e81" strokeWidth="0.5" strokeDasharray="2 2" />
-          </svg>
+        {/* Dynamic Glowing Rings */}
+        <div
+          className={`absolute w-44 h-44 sm:w-52 sm:h-52 rounded-full pointer-events-none transition-opacity duration-500 ${
+            isListening || isSpeaking ? "opacity-100" : "opacity-30"
+          }`}
+        >
+          <div className="w-full h-full rounded-full border border-emerald-500/30 animate-ping opacity-25" />
         </div>
 
-        {/* Dynamic Multi-layered Ripple Rings */}
         {isListening && (
-          <>
-            <div className="absolute w-36 h-36 rounded-full bg-emerald-500/20 ripple-speech-1 pointer-events-none" />
-            <div className="absolute w-52 h-52 rounded-full bg-emerald-500/10 ripple-speech-2 pointer-events-none" />
-          </>
+          <div className="absolute w-48 h-48 sm:w-56 sm:h-56 rounded-full bg-emerald-500/15 filter blur-xl animate-pulse pointer-events-none" />
         )}
         {isSpeaking && (
-          <>
-            <div className="absolute w-36 h-36 rounded-full bg-[#f59e0b]/30 ripple-speech-1 pointer-events-none" />
-            <div className="absolute w-52 h-52 rounded-full bg-[#c05b3f]/20 ripple-speech-2 pointer-events-none" />
-          </>
+          <div className="absolute w-48 h-48 sm:w-56 sm:h-56 rounded-full bg-emerald-400/20 filter blur-xl animate-pulse pointer-events-none" />
         )}
 
-        {/* Big Tactile Sakhi Orb Button */}
+        {/* The Glass Orb Button */}
         <button
           id="main-mic-button"
           onClick={onToggleMic}
           style={{ transform: `scale(${scaleBoost})` }}
-          className={`relative z-10 w-28 h-28 sm:w-32 sm:h-32 rounded-full flex flex-col items-center justify-center text-white transition-transform duration-150 btn-gramya select-none cursor-pointer ${
+          className={`relative z-10 w-28 h-28 sm:w-32 sm:h-32 rounded-full flex flex-col items-center justify-center transition-all duration-200 cursor-pointer ${
             isListening
-              ? "bg-gradient-to-tr from-emerald-700 via-teal-600 to-emerald-500 ring-4 ring-emerald-300 shadow-emerald-800/40"
+              ? "bg-emerald-500 text-zinc-950 shadow-emerald-glow ring-4 ring-emerald-300"
               : isSpeaking
-              ? "bg-gradient-to-tr from-[#c05b3f] via-[#f59e0b] to-[#923821] ring-4 ring-amber-300 animate-pulse shadow-orange-900/40"
+              ? "bg-zinc-900 text-emerald-400 border border-emerald-500/50 shadow-emerald-glow ring-4 ring-emerald-500/30 animate-pulse"
               : isThinking || isToolCalling
-              ? "bg-gradient-to-tr from-amber-600 to-amber-800 ring-4 ring-amber-300 shadow-amber-900/30"
-              : "bg-gradient-to-tr from-[#c05b3f] via-[#d66e51] to-[#923821] ring-4 ring-[#F2DFC9] animate-sakhi-orb-breathe shadow-[#923821]/35"
+              ? "bg-zinc-900 text-amber-400 border border-amber-500/50 ring-4 ring-amber-500/20"
+              : "bg-white/10 hover:bg-white/15 text-white border border-white/20 backdrop-blur-xl shadow-glass hover:scale-105"
           }`}
-          aria-label="Toggle Sakhi Voice Agent"
+          aria-label="Toggle Sakhi Voice"
         >
           {isListening ? (
             <>
-              <Mic className="w-10 h-10 sm:w-11 sm:h-11 animate-bounce" />
-              <span className="text-[11px] font-extrabold uppercase tracking-wider mt-1">Listening</span>
+              <Mic className="w-10 h-10 animate-bounce text-zinc-950" />
+              <span className="text-[10px] font-black uppercase tracking-wider mt-1 text-zinc-950">Listening</span>
             </>
           ) : isSpeaking ? (
             <>
-              <Radio className="w-10 h-10 sm:w-11 sm:h-11 animate-spin" />
-              <span className="text-[11px] font-extrabold uppercase tracking-wider mt-1">Speaking</span>
+              <Radio className="w-10 h-10 animate-spin text-emerald-400" />
+              <span className="text-[10px] font-black uppercase tracking-wider mt-1 text-emerald-400">Speaking</span>
             </>
           ) : isThinking ? (
             <>
-              <Loader2 className="w-10 h-10 sm:w-11 sm:h-11 animate-spin" />
-              <span className="text-[11px] font-extrabold uppercase tracking-wider mt-1">Thinking</span>
+              <Loader2 className="w-10 h-10 animate-spin text-amber-400" />
+              <span className="text-[10px] font-bold uppercase tracking-wider mt-1 text-amber-400">Thinking</span>
             </>
           ) : (
             <>
-              <Mic className="w-10 h-10 sm:w-11 sm:h-11" />
-              <span className="text-[11px] font-extrabold uppercase tracking-wider mt-1">बोलिए / Speak</span>
+              <Mic className="w-10 h-10 text-white drop-shadow-md" />
+              <span className="text-[10px] font-bold uppercase tracking-widest mt-1 text-white/90">बोलिए / Speak</span>
             </>
           )}
         </button>
       </div>
 
-      {/* Barge-in / Interrupt Action Pill */}
+      {/* Barge-in / Interruption Button */}
       {isSpeaking && (
-        <div className="mt-2.5 animate-fade-in">
+        <div className="mt-3 animate-fade-in-up">
           <button
             onClick={onInterrupt}
-            className="flex items-center gap-2 px-4 py-2 bg-rose-700 hover:bg-rose-800 active:scale-95 text-white font-bold text-xs rounded-full shadow-md shadow-rose-900/20 transition-all border border-rose-600 cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-500 active:scale-95 text-white font-bold text-xs rounded-full shadow-lg shadow-rose-950/50 transition-all border border-rose-400/50 cursor-pointer"
           >
-            <Square className="w-3.5 h-3.5 fill-current" />
-            <span>{lang === "hi" ? "रुको / Interrupt Sakhi (Barge-in)" : "Barge-in / Interrupt Sakhi"}</span>
+            <Square className="w-3 h-3 fill-current" />
+            <span>{lang === "hi" ? "रुको / Interrupt (Barge-in)" : "Barge-in / Interrupt Sakhi"}</span>
           </button>
         </div>
       )}
 
-      {/* Real-time Web Audio Waveform */}
+      {/* Waveform Visualizer */}
       <div className="w-full max-w-sm my-3">
         <AudioWaveform
           isActive={isListening || isSpeaking || isThinking}
@@ -166,30 +158,30 @@ export const VoiceController: React.FC<VoiceControllerProps> = ({
         />
       </div>
 
-      {/* Live Speech Subtitle Pill */}
-      <div className="w-full max-w-xl min-h-[48px] flex items-center justify-center p-3 rounded-2xl bg-[#FAF5EC] border border-[#E5D7C2] shadow-xs">
-        <p className="text-xs sm:text-sm font-semibold text-[#2C190D] italic leading-relaxed">
+      {/* Live Speech Subtitle Card */}
+      <div className="w-full max-w-xl min-h-[48px] flex items-center justify-center p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shadow-inner">
+        <p className="text-xs sm:text-sm font-medium text-white/90 italic leading-relaxed">
           {currentSpeechText ? (
             `"${currentSpeechText}"`
           ) : (
-            <span className="text-[#7F6751] not-italic font-medium">
+            <span className="text-zinc-500 not-italic font-normal">
               {lang === "hi"
                 ? "माइक दबाकर अपनी बात बोलें, या नीचे दिए गए त्वरित बटनों पर क्लिक करें..."
-                : "Tap the Sakhi Orb to speak, or click any prompt trigger below..."}
+                : "Tap the Glass Orb to speak, or click any prompt trigger below..."}
             </span>
           )}
         </p>
       </div>
 
-      {/* Quick Test Voice Chips for Demo & Rapid Evaluation */}
+      {/* Quick Prompt Trigger Chips */}
       <div className="mt-5 w-full text-left">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-bold text-[#6D4C33] uppercase tracking-wider flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#c05b3f]" />
-            {lang === "hi" ? "त्वरित आवाज़ टेस्ट (Quick Voice Chips)" : "Demo Voice Prompt Triggers"}
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-1.5">
+            <Sparkles className="w-3 h-3 text-emerald-400" />
+            {lang === "hi" ? "त्वरित आवाज़ टेस्ट (Quick Voice Input Chips)" : "Demo Voice Prompt Triggers"}
           </span>
-          <span className="text-[11px] text-[#8E735D] font-medium hidden sm:inline">
-            Click to simulate voice turns directly
+          <span className="text-[11px] text-zinc-500 font-medium hidden sm:inline">
+            Click to simulate voice input
           </span>
         </div>
 
@@ -200,28 +192,28 @@ export const VoiceController: React.FC<VoiceControllerProps> = ({
                 "Mere paas 100 handmade baskets hain aur mujhe bechna hai."
               )
             }
-            className="text-xs font-semibold px-3.5 py-1.5 bg-white hover:bg-orange-50 hover:border-orange-300 text-[#3C2615] rounded-xl border border-[#DECDB8] shadow-xs transition-all cursor-pointer"
+            className="text-xs font-medium px-3.5 py-1.5 bg-white/5 hover:bg-white/10 text-white/90 rounded-full border border-white/10 transition-all cursor-pointer hover:border-emerald-500/40"
           >
             💬 "Mere paas 100 handmade baskets hain..."
           </button>
 
           <button
             onClick={() => onTriggerPresetUtterance("Bulk mein.")}
-            className="text-xs font-semibold px-3.5 py-1.5 bg-white hover:bg-orange-50 hover:border-orange-300 text-[#3C2615] rounded-xl border border-[#DECDB8] shadow-xs transition-all cursor-pointer"
+            className="text-xs font-medium px-3.5 py-1.5 bg-white/5 hover:bg-white/10 text-white/90 rounded-full border border-white/10 transition-all cursor-pointer hover:border-emerald-500/40"
           >
             💬 "Bulk mein."
           </button>
 
           <button
             onClick={() => onTriggerPresetUtterance("Greater Noida.")}
-            className="text-xs font-semibold px-3.5 py-1.5 bg-white hover:bg-orange-50 hover:border-orange-300 text-[#3C2615] rounded-xl border border-[#DECDB8] shadow-xs transition-all cursor-pointer"
+            className="text-xs font-medium px-3.5 py-1.5 bg-white/5 hover:bg-white/10 text-white/90 rounded-full border border-white/10 transition-all cursor-pointer hover:border-emerald-500/40"
           >
             📍 "Greater Noida."
           </button>
 
           <button
             onClick={() => onTriggerPresetUtterance("Haan, market rate check karo.")}
-            className="text-xs font-semibold px-3.5 py-1.5 bg-white hover:bg-orange-50 hover:border-orange-300 text-[#3C2615] rounded-xl border border-[#DECDB8] shadow-xs transition-all cursor-pointer"
+            className="text-xs font-medium px-3.5 py-1.5 bg-white/5 hover:bg-white/10 text-white/90 rounded-full border border-white/10 transition-all cursor-pointer hover:border-emerald-500/40"
           >
             📊 "Haan, market rate check karo"
           </button>
@@ -233,14 +225,14 @@ export const VoiceController: React.FC<VoiceControllerProps> = ({
                 true // Barge-in interruption
               )
             }
-            className="text-xs font-bold px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-950 rounded-xl border border-amber-300 shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+            className="text-xs font-bold px-3.5 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 rounded-full border border-emerald-500/40 shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
           >
-            ⚡ "Actually mere paas 150 baskets hain" <span className="text-[10px] bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded font-bold">Barge-in</span>
+            ⚡ "Actually mere paas 150 baskets hain" <span className="text-[10px] bg-emerald-400 text-zinc-950 px-1.5 py-0.2 rounded-full font-black">Barge-in</span>
           </button>
 
           <button
             onClick={() => onTriggerPresetUtterance("Haan, buyer se baat karwao.")}
-            className="text-xs font-semibold px-3.5 py-1.5 bg-white hover:bg-orange-50 hover:border-orange-300 text-[#3C2615] rounded-xl border border-[#DECDB8] shadow-xs transition-all cursor-pointer"
+            className="text-xs font-medium px-3.5 py-1.5 bg-white/5 hover:bg-white/10 text-white/90 rounded-full border border-white/10 transition-all cursor-pointer hover:border-emerald-500/40"
           >
             🤝 "Buyer se baat karwao"
           </button>
@@ -251,7 +243,7 @@ export const VoiceController: React.FC<VoiceControllerProps> = ({
                 "Mujhe business ke liye loan chahiye."
               )
             }
-            className="text-xs font-semibold px-3.5 py-1.5 bg-white hover:bg-orange-50 hover:border-orange-300 text-[#3C2615] rounded-xl border border-[#DECDB8] shadow-xs transition-all cursor-pointer"
+            className="text-xs font-medium px-3.5 py-1.5 bg-white/5 hover:bg-white/10 text-white/90 rounded-full border border-white/10 transition-all cursor-pointer hover:border-emerald-500/40"
           >
             🏛️ "Mujhe business ke liye loan chahiye"
           </button>

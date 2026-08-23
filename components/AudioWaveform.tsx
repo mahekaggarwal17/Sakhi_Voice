@@ -44,17 +44,14 @@ export const AudioWaveform: React.FC<AudioWaveformProps> = ({
           const bellCurve = Math.cos(normDist * (Math.PI / 2.2));
 
           if (isSpeaking) {
-            // Harmonic wave for Sakhi speaking in warm terracotta/saffron
             const wave1 = Math.sin(phase * 1.5 + i * 0.35) * 14;
             const wave2 = Math.cos(phase * 2.2 + i * 0.6) * 8;
             barHeight = Math.max(5, (18 + wave1 + wave2) * bellCurve);
           } else if (isListening) {
-            // Live responsive audio frequency
             const dynamicAmp = volumeLevel > 5 ? volumeLevel * 0.45 : 12;
             const wave = Math.sin(phase * 1.8 + i * 0.4) * dynamicAmp;
             barHeight = Math.max(5, (10 + wave) * bellCurve);
           } else {
-            // Gentle thinking or ambient breathing
             const wave = Math.sin(phase * 0.8 + i * 0.3) * 6;
             barHeight = Math.max(4, (6 + wave) * bellCurve);
           }
@@ -65,16 +62,16 @@ export const AudioWaveform: React.FC<AudioWaveformProps> = ({
 
         const gradient = ctx.createLinearGradient(0, y, 0, y + barHeight);
         if (isSpeaking) {
-          gradient.addColorStop(0, "#F2A900"); // Bright Saffron
-          gradient.addColorStop(0.5, "#E8891D"); // Warm Marigold
-          gradient.addColorStop(1, "#C85228"); // Terracotta
+          gradient.addColorStop(0, "#34D399"); // Emerald 400
+          gradient.addColorStop(0.5, "#10B981"); // Emerald 500
+          gradient.addColorStop(1, "#064E3B"); // Emerald 900
         } else if (isListening) {
-          gradient.addColorStop(0, "#34D399"); // Mint Green
-          gradient.addColorStop(0.5, "#10B981"); // Emerald
-          gradient.addColorStop(1, "#059669"); // Deep Forest
+          gradient.addColorStop(0, "#6EE7B7"); // Light emerald
+          gradient.addColorStop(0.5, "#34D399");
+          gradient.addColorStop(1, "#059669");
         } else {
-          gradient.addColorStop(0, "#D9CAB8");
-          gradient.addColorStop(1, "#BAA692");
+          gradient.addColorStop(0, "rgba(255, 255, 255, 0.4)");
+          gradient.addColorStop(1, "rgba(255, 255, 255, 0.1)");
         }
 
         ctx.fillStyle = gradient;
@@ -99,7 +96,7 @@ export const AudioWaveform: React.FC<AudioWaveformProps> = ({
   }, [isActive, isSpeaking, isListening, volumeLevel]);
 
   return (
-    <div className="w-full h-12 flex items-center justify-center bg-[#F4EDE2] rounded-2xl px-3 py-1 border border-[#E5D7C2] shadow-inner">
+    <div className="w-full h-12 flex items-center justify-center bg-white/5 rounded-2xl px-3 py-1 border border-white/10 backdrop-blur-md">
       <canvas
         ref={canvasRef}
         width={360}
