@@ -1138,6 +1138,8 @@ export default function SakhiVoiceWebUI() {
         onRunStep={(stepNumber) => {
           setCurrentDemoStep(stepNumber);
           setCurrentScreen("VOICE_SCREEN");
+          setShowDemoGuide(false);
+
           if (stepNumber === 1) {
             handleProcessTurn("मेरे पास 100 हस्तनिर्मित टोकरियाँ हैं और मुझे बेचना है।");
           } else if (stepNumber === 2) {
@@ -1154,37 +1156,15 @@ export default function SakhiVoiceWebUI() {
             setPendingDealData({
               buyerName: "राजेश शर्मा",
               organization: "ABC हैंडीक्राफ्ट्स",
-              product: "हस्तनिर्मित टोकरियाँ",
-              quantity: 150,
+              product: businessMemory.product || "हस्तनिर्मित टोकरियाँ",
+              quantity: businessMemory.quantity || 150,
               agreedPrice: 205,
             });
             setShowDealConfirmModal(true);
           } else if (stepNumber === 8) {
             handleProcessTurn("मुझे बिजनेस के लिए लोन सहायता चाहिए।");
           } else if (stepNumber === 9) {
-            setActiveEscalationCase({
-              caseId: "CASE-SKH-8291",
-              createdAt: "Just now",
-              entrepreneurProfile: {
-                product: "Handmade Baskets",
-                currentProduction: "150 units",
-                location: "Greater Noida",
-              },
-              supportRequirement: {
-                purpose: "Production Capacity Expansion & Dye Materials",
-                requestedAmount: "₹50,000",
-                supportCategory: "Financial Grant & Loan",
-              },
-              matchedOrganization: SEED_SUPPORT_ORGS[0],
-              conversationSummary: "Artisan produces 150 handmade baskets in Greater Noida, closed commercial order with Rajesh Sharma at ₹205/unit, seeking ₹50,000 capital expansion grant for dye materials.",
-              verifiedDetails: [
-                "Product: Handmade Baskets",
-                "Current Order: 150 units",
-                "Price: ₹205 agreed deal",
-                "Need: Business Expansion grant",
-              ],
-              status: "CASE_CREATED",
-            });
+            handleProcessTurn("अधिकारी से बात करवा दो।");
           }
         }}
       />
