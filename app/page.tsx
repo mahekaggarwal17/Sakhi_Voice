@@ -13,12 +13,13 @@ import { DealConfirmModal } from "@/components/DealConfirmModal";
 import { NgoSupportCard } from "@/components/NgoSupportCard";
 import { CaseEscalationModal } from "@/components/CaseEscalationModal";
 import { DemoScenarioGuide } from "@/components/DemoScenarioGuide";
+import { ImpactDashboard } from "@/components/ImpactDashboard";
 import { INITIAL_BUSINESS_MEMORY, BusinessMemoryState } from "@/lib/agent/conversationState";
 import { ToolExecutionResult, RECORDED_DEALS, RECORDED_CASES } from "@/lib/agent/tools";
 import { BuyerProfile, SEED_BUYERS } from "@/lib/data/seedBuyers";
 import { SupportOrganization, SupportCaseRecord, SEED_SUPPORT_ORGS } from "@/lib/data/seedSupport";
 import { AgoraVoiceManager } from "@/lib/agora/rtcClient";
-import { Sparkles, TrendingUp, Handshake, HeartHandshake, ShieldCheck } from "lucide-react";
+import { Sparkles, TrendingUp, Handshake, HeartHandshake, ShieldCheck, LayoutDashboard, MessageSquare } from "lucide-react";
 
 export default function SakhiVoiceApp() {
   // State: Language & Agora Engine
@@ -27,6 +28,7 @@ export default function SakhiVoiceApp() {
   const [voiceState, setVoiceState] = useState<AgentVoiceState>("IDLE");
   const [volumeLevel, setVolumeLevel] = useState<number>(0);
   const [currentSpeechText, setCurrentSpeechText] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<"WORKSPACE" | "DASHBOARD">("WORKSPACE");
 
   // Business State & Transcript
   const [businessMemory, setBusinessMemory] = useState<BusinessMemoryState>(INITIAL_BUSINESS_MEMORY);
@@ -454,84 +456,120 @@ export default function SakhiVoiceApp() {
           </div>
         </div>
 
-        {/* Primary Interactive Workspace Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column: Voice Agent Controller + Business Snapshot */}
-          <div className="lg:col-span-6 flex flex-col gap-6">
-            {/* 1. Voice Controller Hub */}
-            <VoiceController
-              voiceState={voiceState}
-              onToggleMic={handleToggleMic}
-              onInterrupt={handleInterrupt}
-              volumeLevel={volumeLevel}
-              currentSpeechText={currentSpeechText}
-              onTriggerPresetUtterance={(text, isInterruption) =>
-                handleProcessTurn(text, isInterruption)
-              }
-              lang={lang}
-            />
+        {/* Navigation Tabs (Live Voice Suite vs Impact Dashboard) */}
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => setActiveTab("WORKSPACE")}
+            className={`px-5 py-2.5 rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer shadow-xs ${
+              activeTab === "WORKSPACE"
+                ? "bg-[#c05b3f] text-white shadow-tactile btn-gramya"
+                : "bg-white text-[#523C2B] hover:bg-[#FAF5EC] border border-[#E7D9C4]"
+            }`}
+          >
+            <MessageSquare className="w-4 h-4" />
+            <span>{lang === "hi" ? "लाइव वॉयस एजेंट (Live Voice Suite)" : "Live Voice Suite"}</span>
+          </button>
 
-            {/* 2. Real-time Tool Execution Feedback Badge */}
-            {lastExecutedTool && (
-              <ToolExecutionBadge toolResult={lastExecutedTool} lang={lang} />
-            )}
-
-            {/* 3. Business Memory / Snapshot HUD */}
-            <BusinessSnapshot memory={businessMemory} lang={lang} />
-          </div>
-
-          {/* Right Column: Live Transcript + Context Cards */}
-          <div className="lg:col-span-6 flex flex-col gap-6">
-            {/* 1. Live Dialogue Transcript */}
-            <ConversationTranscript transcript={transcript} lang={lang} />
-
-            {/* 2. Contextual Tool Results Card based on Conversation Phase */}
-            {businessMemory.conversationPhase === "MARKET_CHECK" && businessMemory.marketPriceRange && (
-              <MarketIntelligenceCard
-                data={{
-                  id: "market-data-active",
-                  product: businessMemory.product || "Handmade Basket",
-                  aliases: [],
-                  category: "handicraft",
-                  minPrice: businessMemory.marketPriceRange.min,
-                  maxPrice: businessMemory.marketPriceRange.max,
-                  suggestedNegotiationStart: businessMemory.marketPriceRange.suggested,
-                  unit: "per basket",
-                  verifiedSource: businessMemory.marketPriceRange.source,
-                  sourceType: "artisan_board",
-                  confidence: "Verified",
-                  lastUpdated: "Today",
-                  priceTrend: "High Demand",
-                  descriptionHindi: "हस्तनिर्मित टोकरियाँ",
-                  descriptionEnglish: "Handmade baskets",
-                  recommendedPackaging: "Bundle packaging",
-                }}
-                onFindBuyers={() => handleProcessTurn("Buyer dhoondo")}
-                lang={lang}
-              />
-            )}
-
-            {(businessMemory.conversationPhase === "BUYER_DISCOVERY" || businessMemory.conversationPhase === "NEGOTIATION") && (
-              <BuyerDiscoveryList
-                buyers={SEED_BUYERS}
-                onSelectBuyerToCall={(buyer) => {
-                  setActiveBuyerCall(buyer);
-                }}
-                lang={lang}
-              />
-            )}
-
-            {(businessMemory.conversationPhase === "BUSINESS_SUPPORT" || businessMemory.conversationPhase === "HUMAN_ESCALATION") && (
-              <NgoSupportCard
-                organizations={SEED_SUPPORT_ORGS}
-                onRequestHumanAssistance={(org) => {
-                  handleProcessTurn("Counselor se connect karo.");
-                }}
-                lang={lang}
-              />
-            )}
-          </div>
+          <button
+            onClick={() => setActiveTab("DASHBOARD")}
+            className={`px-5 py-2.5 rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer shadow-xs ${
+              activeTab === "DASHBOARD"
+                ? "bg-[#c05b3f] text-white shadow-tactile btn-gramya"
+                : "bg-white text-[#523C2B] hover:bg-[#FAF5EC] border border-[#E7D9C4]"
+            }`}
+          >
+            <LayoutDashboard className="w-4 h-4" />
+            <span>{lang === "hi" ? "प्रभाव एवं कमाई डैशबोर्ड (Impact Dashboard)" : "Impact Dashboard"}</span>
+          </button>
         </div>
+
+        {/* Tab 1: Primary Interactive Workspace Grid */}
+        {activeTab === "WORKSPACE" && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in">
+            {/* Left Column: Voice Agent Controller + Business Snapshot */}
+            <div className="lg:col-span-6 flex flex-col gap-6">
+              {/* 1. Voice Controller Hub */}
+              <VoiceController
+                voiceState={voiceState}
+                onToggleMic={handleToggleMic}
+                onInterrupt={handleInterrupt}
+                volumeLevel={volumeLevel}
+                currentSpeechText={currentSpeechText}
+                onTriggerPresetUtterance={(text, isInterruption) =>
+                  handleProcessTurn(text, isInterruption)
+                }
+                lang={lang}
+              />
+
+              {/* 2. Real-time Tool Execution Feedback Badge */}
+              {lastExecutedTool && (
+                <ToolExecutionBadge toolResult={lastExecutedTool} lang={lang} />
+              )}
+
+              {/* 3. Business Memory / Snapshot HUD */}
+              <BusinessSnapshot memory={businessMemory} lang={lang} />
+            </div>
+
+            {/* Right Column: Live Transcript + Context Cards */}
+            <div className="lg:col-span-6 flex flex-col gap-6">
+              {/* 1. Live Dialogue Transcript */}
+              <ConversationTranscript transcript={transcript} lang={lang} />
+
+              {/* 2. Contextual Tool Results Card based on Conversation Phase */}
+              {businessMemory.conversationPhase === "MARKET_CHECK" && businessMemory.marketPriceRange && (
+                <MarketIntelligenceCard
+                  data={{
+                    id: "market-data-active",
+                    product: businessMemory.product || "Handmade Basket",
+                    aliases: [],
+                    category: "handicraft",
+                    minPrice: businessMemory.marketPriceRange.min,
+                    maxPrice: businessMemory.marketPriceRange.max,
+                    suggestedNegotiationStart: businessMemory.marketPriceRange.suggested,
+                    unit: "per basket",
+                    verifiedSource: businessMemory.marketPriceRange.source,
+                    sourceType: "artisan_board",
+                    confidence: "Verified",
+                    lastUpdated: "Today",
+                    priceTrend: "High Demand",
+                    descriptionHindi: "हस्तनिर्मित टोकरियाँ",
+                    descriptionEnglish: "Handmade baskets",
+                    recommendedPackaging: "Bundle packaging",
+                  }}
+                  onFindBuyers={() => handleProcessTurn("Buyer dhoondo")}
+                  lang={lang}
+                />
+              )}
+
+              {(businessMemory.conversationPhase === "BUYER_DISCOVERY" || businessMemory.conversationPhase === "NEGOTIATION") && (
+                <BuyerDiscoveryList
+                  buyers={SEED_BUYERS}
+                  onSelectBuyerToCall={(buyer) => {
+                    setActiveBuyerCall(buyer);
+                  }}
+                  lang={lang}
+                />
+              )}
+
+              {(businessMemory.conversationPhase === "BUSINESS_SUPPORT" || businessMemory.conversationPhase === "HUMAN_ESCALATION") && (
+                <NgoSupportCard
+                  organizations={SEED_SUPPORT_ORGS}
+                  onRequestHumanAssistance={(org) => {
+                    handleProcessTurn("Counselor se connect karo.");
+                  }}
+                  lang={lang}
+                />
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Tab 2: Rural Artisan Impact & Earnings Dashboard */}
+        {activeTab === "DASHBOARD" && (
+          <div className="animate-fade-in">
+            <ImpactDashboard lang={lang} />
+          </div>
+        )}
       </main>
 
       {/* MODAL 1: Live Agora RTC Buyer Voice Call */}
