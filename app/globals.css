@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --background: #FCF9F5;
+  --foreground: #1E1B18;
+  --terracotta: #D35400;
+  --font-outfit: 'Outfit', sans-serif;
+  --font-inter: 'Plus Jakarta Sans', sans-serif;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-inter);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-outfit);
+}
+
+/* Custom scrollbar for transcripts and lists */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F2EBE1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb {
+  background: #D7C4B2;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #C4AD97;
+}
+
+/* Tactile button press effect for rural accessibility */
+.btn-tactile {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 0 0 rgba(0, 0, 0, 0.15);
+}
+.btn-tactile:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 0 rgba(0, 0, 0, 0.15);
+}
+
+/* Ripple ring animations for active mic */
+@keyframes voice-ripple-1 {
+  0% { transform: scale(0.9); opacity: 0.9; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+@keyframes voice-ripple-2 {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  100% { transform: scale(2.1); opacity: 0; }
+}
+
+.ripple-ring-1 {
+  animation: voice-ripple-1 2.2s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+}
+
+.ripple-ring-2 {
+  animation: voice-ripple-2 2.2s cubic-bezier(0, 0.2, 0.8, 1) 0.7s infinite;
+}
