@@ -1,4 +1,10 @@
-import { BusinessMemoryState, INITIAL_BUSINESS_MEMORY, updateMissingFields } from "./conversationState";
+import {
+  BusinessMemoryState,
+  INITIAL_BUSINESS_MEMORY,
+  updateMissingFields,
+  generateConversationSummary,
+  ConversationMessage,
+} from "./conversationState";
 import {
   executeGetMarketPrice,
   executeFindBuyers,
@@ -24,16 +30,31 @@ export function processUserVoiceInput(
   currentState: BusinessMemoryState,
   isInterruption: boolean = false
 ): AgentTurnResponse {
-  const input = rawInput.trim();
+  const input = (rawInput || "").trim();
   const lower = input.toLowerCase();
-  const nextState: BusinessMemoryState = JSON.parse(JSON.stringify(currentState));
+  const nextState: BusinessMemoryState = JSON.parse(JSON.stringify(currentState || INITIAL_BUSINESS_MEMORY));
+
+  // Append user message to history
+  const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  if (input) {
+    if (!nextState.conversationHistory) nextState.conversationHistory = [];
+    nextState.conversationHistory.push({
+      role: "user",
+      content: input,
+      timestamp,
+    });
+  }
 
   let executedTool: ToolExecutionResult | null = null;
   let responseHindi = "";
   let responseDevanagari = "";
   let responseEnglish = "";
+  let nextQuestionTag: string | null = null;
+  let actionTrigger: string | undefined = undefined;
 
-  // 1. CORRECTION / BARGE-IN RECOVERY (e.g., "Actually 150 hain", "Ruko, 120 hain", "Actually mere paas 150 baskets hain")
+  // =========================================================================
+  // 1. CORRECTION / BARGE-IN RECOVERY ("Actually 150 hain", "Ruko 200 hain")
+  // =========================================================================
   const numberMatch = input.match(/\b(\d{2,4})\b/);
   const isCorrection =
     lower.includes("actually") ||
@@ -41,6 +62,9 @@ export function processUserVoiceInput(
     lower.includes("nahi") ||
     lower.includes("change") ||
     lower.includes("wait") ||
+    input.includes("असल में") ||
+    input.includes("रुको") ||
+    input.includes("नहीं") ||
     isInterruption;
 
   if (numberMatch && (isCorrection || (nextState.quantity && parseInt(numberMatch[1], 10) !== nextState.quantity))) {
@@ -48,162 +72,288 @@ export function processUserVoiceInput(
     if (!isNaN(newQty)) {
       nextState.quantity = newQty;
       nextState.missingFields = updateMissingFields(nextState);
+      nextState.conversationSummary = generateConversationSummary(nextState);
 
       responseHindi = `Achha, ${newQty} hain. Got it. Main updated quantity ke basis par buyers check karti hoon.`;
       responseDevanagari = `अच्छा, ${newQty} हैं। गॉट इट। मैं अपडेटेड क्वांटिटी के बेसिस पर बायर्स चेक करती हूँ।`;
       responseEnglish = `Got it, ${newQty} units. I'll search buyers based on the updated quantity.`;
 
-      // Automatically execute buyer discovery for the updated quantity if in progress
       executedTool = executeFindBuyers(nextState.product || "Handmade Basket", newQty);
       nextState.conversationPhase = "BUYER_DISCOVERY";
+      nextState.lastQuestionAsked = "ASK_CONNECT_BUYER";
+      nextState.lastUserIntent = "CORRECTION";
 
-      return {
-        spokenTextHindi: responseHindi,
-        spokenTextDevanagari: responseDevanagari,
-        spokenTextEnglish: responseEnglish,
-        updatedMemory: nextState,
-        executedTool,
-        conversationPhase: nextState.conversationPhase,
-        interruptedTurn: true,
-      };
+      return formatResponse(responseHindi, responseDevanagari, responseEnglish, nextState, executedTool, "BUYER_DISCOVERY", undefined, true);
     }
   }
 
-  // 2. PRODUCT & ATTRIBUTE EXTRACTION
-  if (lower.includes("basket") || lower.includes("tokri")) {
+  // =========================================================================
+  // 2. PRODUCT & ATTRIBUTE EXTRACTION (Slot Filling across turns)
+  // =========================================================================
+  // Product extraction
+  if (
+    lower.includes("basket") ||
+    lower.includes("tokri") ||
+    input.includes("टोकरी") ||
+    input.includes("टोकरियां") ||
+    input.includes("टोकरियाँ") ||
+    input.includes("हस्तशिल्प")
+  ) {
     nextState.product = "Handmade Basket";
     nextState.productionType = "handmade";
-  } else if (lower.includes("honey") || lower.includes("shahad")) {
+  } else if (lower.includes("honey") || lower.includes("shahad") || input.includes("शहद")) {
     nextState.product = "Pure Organic Honey";
     nextState.productionType = "farm_harvested";
-  } else if (lower.includes("dupatta") || lower.includes("chunni") || lower.includes("cloth")) {
+  } else if (
+    lower.includes("dupatta") ||
+    lower.includes("chunni") ||
+    lower.includes("cloth") ||
+    input.includes("दुपट्टा") ||
+    input.includes("कपड़ा")
+  ) {
     nextState.product = "Handwoven Cotton Dupatta";
     nextState.productionType = "handmade";
-  } else if (lower.includes("haldi") || lower.includes("turmeric")) {
+  } else if (lower.includes("haldi") || lower.includes("turmeric") || input.includes("हल्दी")) {
     nextState.product = "Organic Turmeric Powder";
     nextState.productionType = "organic";
-  } else if (lower.includes("diya") || lower.includes("mitti") || lower.includes("pottery")) {
+  } else if (
+    lower.includes("diya") ||
+    lower.includes("mitti") ||
+    lower.includes("pottery") ||
+    input.includes("दीया") ||
+    input.includes("दीये") ||
+    input.includes("मिट्टी")
+  ) {
     nextState.product = "Terracotta Clay Diyas";
     nextState.productionType = "handmade";
-  } else if (lower.includes("jute") || lower.includes("bag") || lower.includes("thaila")) {
+  } else if (lower.includes("jute") || lower.includes("bag") || input.includes("बैग") || input.includes("थैला")) {
     nextState.product = "Eco-Friendly Jute Bags";
     nextState.productionType = "handmade";
   }
 
-  // Material & Location Extraction
-  if (lower.includes("noida") || lower.includes("delhi") || lower.includes("jaipur") || lower.includes("lucknow")) {
-    if (lower.includes("noida")) nextState.location = "Greater Noida";
-    else if (lower.includes("jaipur")) nextState.location = "Jaipur";
-    else if (lower.includes("delhi")) nextState.location = "Delhi NCR";
+  // Location extraction
+  if (
+    lower.includes("greater noida") ||
+    lower.includes("noida") ||
+    lower.includes("delhi") ||
+    lower.includes("jaipur") ||
+    lower.includes("lucknow") ||
+    input.includes("ग्रेटर नोएडा") ||
+    input.includes("नोएडा") ||
+    input.includes("दिल्ली") ||
+    input.includes("जयपुर")
+  ) {
+    if (lower.includes("noida") || input.includes("नोएडा")) nextState.location = "Greater Noida";
+    else if (lower.includes("jaipur") || input.includes("जयपुर")) nextState.location = "Jaipur";
+    else if (lower.includes("delhi") || input.includes("दिल्ली")) nextState.location = "Delhi NCR";
+    else if (lower.includes("lucknow") || input.includes("लखनऊ")) nextState.location = "Lucknow Cluster";
   }
 
   // Selling intent extraction
-  if (lower.includes("bulk")) {
+  if (lower.includes("bulk") || input.includes("थोक") || lower.includes("wholesale")) {
     nextState.sellingIntent = "bulk";
-  } else if (lower.includes("local")) {
+  } else if (lower.includes("local") || input.includes("खुदरा") || lower.includes("retail")) {
     nextState.sellingIntent = "retail";
   }
 
-  // Quantity extraction if not yet set
+  // Quantity extraction
   if (numberMatch && !nextState.quantity) {
+    const qty = parseInt(numberMatch[1], 10);
+    if (!isNaN(qty)) nextState.quantity = qty;
+  }
+
+  // Check if user answered short quantity e.g. "100", "100 ke around"
+  if (nextState.lastQuestionAsked === "ASK_QUANTITY" && numberMatch) {
     nextState.quantity = parseInt(numberMatch[1], 10);
   }
 
+  // Check if user answered short selling intent e.g. "Haan", "Bulk", "Bulk mein"
+  if (nextState.lastQuestionAsked === "ASK_SELLING_INTENT") {
+    if (lower.includes("haan") || lower.includes("yes") || lower.includes("bulk") || input.includes("हाँ") || input.includes("थोक")) {
+      nextState.sellingIntent = "bulk";
+    } else if (lower.includes("local") || input.includes("लोकल")) {
+      nextState.sellingIntent = "retail";
+    }
+  }
+
+  // Check if user answered short location e.g. "Greater Noida"
+  if (nextState.lastQuestionAsked === "ASK_LOCATION") {
+    if (lower.includes("noida") || input.includes("नोएडा")) nextState.location = "Greater Noida";
+    else if (lower.includes("jaipur") || input.includes("जयपुर")) nextState.location = "Jaipur";
+    else if (lower.includes("delhi") || input.includes("दिल्ली")) nextState.location = "Delhi NCR";
+    else if (input.length > 2 && !numberMatch) nextState.location = input;
+  }
+
   nextState.missingFields = updateMissingFields(nextState);
+  nextState.conversationSummary = generateConversationSummary(nextState);
 
-  // 3. INTENT: SPECIFIC QUESTION FLOWS (Human & Conversational)
+  // =========================================================================
+  // 3. CONTEXTUAL INTENT ROUTING (Pronouns & Continuity)
+  // =========================================================================
 
-  // A. User answers "Bulk mein" or "Bulk"
+  // A. HUMAN ESCALATION / SUMMARY HANDOVER
   if (
-    (lower === "bulk" || lower === "bulk mein" || lower.includes("bulk mein")) &&
-    nextState.conversationPhase === "PRODUCT_DISCOVERY"
+    lower.includes("person") ||
+    lower.includes("human") ||
+    lower.includes("officer") ||
+    lower.includes("adhikari") ||
+    lower.includes("counselor") ||
+    input.includes("अधिकारी") ||
+    input.includes("इंसान") ||
+    input.includes("व्यक्ति") ||
+    (lower.includes("baat karwa do") && lower.includes("insan"))
   ) {
-    nextState.sellingIntent = "bulk";
-    responseHindi = `Theek hai. Main bulk buyers check kar sakti hoon. Aap kis area se hain?`;
-    responseDevanagari = `ठीक है। मैं बल्क बायर्स चेक कर सकती हूँ। आप किस एरिया से हैं?`;
-    responseEnglish = `Great. I can check bulk buyers. Which location or area are you from?`;
-
-    return {
-      spokenTextHindi: responseHindi,
-      spokenTextDevanagari: responseDevanagari,
-      spokenTextEnglish: responseEnglish,
-      updatedMemory: nextState,
-      executedTool: null,
-      conversationPhase: "PRODUCT_DISCOVERY",
-    };
-  }
-
-  // B. User states location (e.g. "Greater Noida", "Jaipur")
-  if (
-    (lower.includes("greater noida") || lower.includes("noida") || lower.includes("jaipur") || lower.includes("delhi")) &&
-    nextState.conversationPhase === "PRODUCT_DISCOVERY"
-  ) {
-    nextState.location = "Greater Noida";
-    responseHindi = `Got it. Pehle market rate check karun?`;
-    responseDevanagari = `गॉट इट। पहले मार्केट रेट चेक करूँ?`;
-    responseEnglish = `Got it. Shall I check current market rates first?`;
-
-    return {
-      spokenTextHindi: responseHindi,
-      spokenTextDevanagari: responseDevanagari,
-      spokenTextEnglish: responseEnglish,
-      updatedMemory: nextState,
-      executedTool: null,
-      conversationPhase: "MARKET_CHECK",
-    };
-  }
-
-  // C. Market Price Query ("Market rate kya chal raha hai", "Haan", "rate check karo", "price", "mandi rate")
-  if (
-    lower.includes("rate") ||
-    lower.includes("price") ||
-    lower.includes("market") ||
-    lower.includes("bhav") ||
-    lower.includes("bhaav") ||
-    (nextState.conversationPhase === "MARKET_CHECK" && (lower === "haan" || lower.includes("haan") || lower === "yes" || lower.includes("check karo")))
-  ) {
-    executedTool = executeGetMarketPrice(
-      nextState.product || "Handmade Basket",
-      nextState.location || undefined,
-      nextState.quantity || undefined
+    executedTool = executeCreateSupportCase(
+      nextState,
+      "₹50,000",
+      "Business Consultation & Market Escalation"
     );
-    nextState.conversationPhase = "MARKET_CHECK";
 
-    if (executedTool.data) {
-      nextState.marketPriceRange = {
-        min: executedTool.data.minPrice,
-        max: executedTool.data.maxPrice,
-        suggested: executedTool.data.suggestedNegotiationStart,
-        source: executedTool.data.verifiedSource,
-        confidence: executedTool.data.confidence,
-      };
+    nextState.conversationPhase = "HUMAN_ESCALATION";
+    nextState.lastUserIntent = "HUMAN_ESCALATION";
+
+    responseHindi = `Main aapki ab tak ki saari details officer ke saath share kar rahi hoon, taaki aapko dobara na batana pade. Thodi der mein call connect ho jayegi.`;
+    responseDevanagari = `मैं आपकी अब तक की सारी डिटेल्स ऑफिसर के साथ शेयर कर रही हूँ, ताकि आपको दोबारा न बताना पड़े। थोड़ी देर में कॉल कनेक्ट हो जाएगी।`;
+    responseEnglish = `I am sharing all your business context with the support officer so you don't have to repeat anything. Connecting call shortly.`;
+
+    return formatResponse(responseHindi, responseDevanagari, responseEnglish, nextState, executedTool, "HUMAN_ESCALATION");
+  }
+
+  // B. BUSINESS SUPPORT / LOANS / NGO SCHEMES ("Mujhe business expand karne ke liye support chahiye", "Loan chahiye")
+  if (
+    lower.includes("support") ||
+    lower.includes("loan") ||
+    lower.includes("grant") ||
+    lower.includes("ngo") ||
+    lower.includes("expand") ||
+    lower.includes("mudra") ||
+    lower.includes("sahayata") ||
+    lower.includes("paise") ||
+    input.includes("लोन") ||
+    input.includes("मुद्रा") ||
+    input.includes("सहायता") ||
+    input.includes("अनुदान") ||
+    input.includes("पैसे") ||
+    (nextState.lastQuestionAsked === "ASK_SUPPORT_OFFICER" && (lower.includes("haan") || lower.includes("bhej do") || input.includes("हाँ")))
+  ) {
+    if (nextState.lastQuestionAsked === "ASK_SUPPORT_OFFICER" && (lower.includes("haan") || lower.includes("yes") || lower.includes("bhej do") || input.includes("हाँ") || input.includes("भेज दो"))) {
+      executedTool = executeCreateSupportCase(
+        nextState,
+        "₹50,000",
+        "Production Capacity Expansion & Raw Materials"
+      );
+
+      nextState.conversationPhase = "BUSINESS_SUPPORT";
+      nextState.supportRequirement.escalationReady = true;
+
+      responseHindi = `Case create ho gaya hai aur details SEWA officer ko dispatch kar di gayi hain. Officer jald hi aapse call par sampark karenge.`;
+      responseDevanagari = `केस क्रिएट हो गया है और डिटेल्स सेवा ऑफिसर को डिस्पैच कर दी गई हैं। ऑफिसर जल्द ही आपसे कॉल पर संपर्क करेंगे।`;
+      responseEnglish = `Case created and dispatched to SEWA officer. They will reach out to you shortly.`;
+
+      return formatResponse(responseHindi, responseDevanagari, responseEnglish, nextState, executedTool, "BUSINESS_SUPPORT");
     }
 
-    responseHindi = `Abhi jo data mila hai, uske hisaab se rate around ₹${executedTool.data?.minPrice || 180} se ₹${executedTool.data?.maxPrice || 220} per basket hai. Kya main buyers check karun?`;
-    responseDevanagari = `अभी जो डेटा मिला है, उसके हिसाब से रेट अराउंड ₹${executedTool.data?.minPrice || 180} से ₹${executedTool.data?.maxPrice || 220} प्रति बास्केट है। क्या मैं बायर्स चेक करूँ?`;
-    responseEnglish = `Current market rate is around ₹${executedTool.data?.minPrice || 180} to ₹${executedTool.data?.maxPrice || 220} per unit. Shall I search buyers?`;
+    executedTool = executeFindSupportOptions(input || "business expansion loan grant");
+    nextState.conversationPhase = "BUSINESS_SUPPORT";
+    nextState.supportRequirement.needed = true;
+    nextState.supportRequirement.purpose = "Production Capacity Expansion & Raw Materials";
+    nextState.lastQuestionAsked = "ASK_SUPPORT_OFFICER";
+    nextState.lastUserIntent = "BUSINESS_SUPPORT";
 
-    return {
-      spokenTextHindi: responseHindi,
-      spokenTextDevanagari: responseDevanagari,
-      spokenTextEnglish: responseEnglish,
-      updatedMemory: nextState,
-      executedTool,
-      conversationPhase: nextState.conversationPhase,
-    };
+    responseHindi = `SEWA Bharat aur Mudra Yojana ke options available hain — ₹50,000 grant aur easy loans. Kya main SEWA officer ko details bhej doon?`;
+    responseDevanagari = `सेवा भारत और मुद्रा योजना के ऑप्शन्स उपलब्ध हैं — ₹50,000 ग्रांट और आसान लोन। क्या मैं सेवा ऑफिसर को डिटेल्स भेज दूँ?`;
+    responseEnglish = `SEWA Bharat grant and Mudra loan available. Shall I submit your case details to the SEWA officer?`;
+
+    return formatResponse(responseHindi, responseDevanagari, responseEnglish, nextState, executedTool, "BUSINESS_SUPPORT");
   }
 
-  // D. Buyer Discovery ("Buyer dhoondo", "buyer chahiye", "kisko bechu", "find buyers", "buyers check karo")
+  // C. DEAL CONFIRMATION ("Deal confirm kar do", "Haan pakki", "Haan", "Confirm")
+  if (
+    (nextState.conversationPhase === "NEGOTIATION" || nextState.lastQuestionAsked === "ASK_CONFIRM_DEAL" || lower.includes("deal")) &&
+    (lower.includes("haan") ||
+      lower.includes("yes") ||
+      lower.includes("confirm") ||
+      lower.includes("pakki") ||
+      lower.includes("theek hai") ||
+      input.includes("हाँ") ||
+      input.includes("पक्की") ||
+      input.includes("डील"))
+  ) {
+    executedTool = executeCreateDeal(
+      "buyer-abc-01",
+      nextState.product || "Handmade Baskets",
+      nextState.quantity || 150,
+      nextState.activeNegotiation.agreedFinalPrice || 205,
+      true
+    );
+
+    nextState.conversationPhase = "DEAL_CONFIRMATION";
+    nextState.activeNegotiation.status = "CONFIRMED";
+    nextState.lastQuestionAsked = "ASK_POST_DEAL_SUPPORT";
+    nextState.lastUserIntent = "DEAL_CONFIRMATION";
+
+    responseHindi = `Deal confirm ho gayi hai! Order database mein record ho gaya. Kya aapko production badhane ke liye koi loan ya support chahiye?`;
+    responseDevanagari = `डील कन्फर्म हो गई है! आर्डर डेटाबेस में रिकॉर्ड हो गया। क्या आपको प्रोडक्शन बढ़ाने के लिए कोई लोन या सपोर्ट चाहिए?`;
+    responseEnglish = `Deal confirmed and recorded! Would you also like to explore financial grants or loan support?`;
+
+    return formatResponse(responseHindi, responseDevanagari, responseEnglish, nextState, executedTool, "DEAL_CONFIRMATION");
+  }
+
+  // D. CONNECT TO BUYER AGORA VOICE CALL ("Buyer se baat karwa do", "Call buyer", "Rajesh se baat karwao")
+  if (
+    lower.includes("baat karwao") ||
+    lower.includes("baat karwa do") ||
+    lower.includes("call") ||
+    lower.includes("connect") ||
+    lower.includes("talk to") ||
+    lower.includes("rajesh") ||
+    input.includes("कॉल") ||
+    input.includes("बात करवाओ") ||
+    input.includes("बात करवा दो") ||
+    input.includes("राजेश") ||
+    (nextState.lastQuestionAsked === "ASK_CONNECT_BUYER" && (lower.includes("haan") || lower.includes("yes") || lower.includes("karwa do") || input.includes("हाँ") || input.includes("करवाओ")))
+  ) {
+    nextState.conversationPhase = "NEGOTIATION";
+    nextState.activeNegotiation.buyerId = "buyer-abc-01";
+    nextState.activeNegotiation.buyerName = "Rajesh Sharma (ABC Handicrafts)";
+    nextState.activeNegotiation.status = "CALLING";
+    nextState.lastQuestionAsked = "IN_BUYER_CALL";
+    nextState.lastUserIntent = "CONNECT_BUYER";
+    actionTrigger = "START_BUYER_CALL";
+
+    responseHindi = `Okay, main aapko buyer se connect karti hoon.`;
+    responseDevanagari = `ओके, मैं आपको बायर से कनेक्ट करती हूँ।`;
+    responseEnglish = `Connecting you directly with the buyer via Agora Voice.`;
+
+    executedTool = {
+      toolName: "startAgoraBuyerCall",
+      status: "SUCCESS",
+      summaryHindi: "Buyer call connected via Agora RTC.",
+      summaryDevanagari: "बायर कॉल कनेक्ट हो गई है।",
+      summaryEnglish: "Agora Voice channel connecting entrepreneur with buyer.",
+      data: { channelName: `sakhi-buyer-deal-${Date.now()}` },
+      actionRequired: "START_CALL",
+    };
+
+    return formatResponse(responseHindi, responseDevanagari, responseEnglish, nextState, executedTool, "NEGOTIATION", actionTrigger);
+  }
+
+  // E. FIND BUYERS ("Buyer dhoondo", "Kharidar dikhao", "Haan buyer check karo")
   if (
     lower.includes("buyer") ||
     lower.includes("kharidar") ||
     lower.includes("kharidaar") ||
     lower.includes("bechna") ||
     lower.includes("sell") ||
-    (nextState.conversationPhase === "MARKET_CHECK" && (lower.includes("haan") || lower.includes("yes") || lower.includes("dhoondo")))
+    input.includes("खरीदार") ||
+    input.includes("व्यापारी") ||
+    input.includes("बायर") ||
+    (nextState.lastQuestionAsked === "ASK_FIND_BUYERS" && (lower.includes("haan") || lower.includes("yes") || lower.includes("dhoondo") || input.includes("हाँ") || input.includes("दिखाओ")))
   ) {
     executedTool = executeFindBuyers(nextState.product || "Handmade Basket", nextState.quantity || 150);
     nextState.conversationPhase = "BUYER_DISCOVERY";
+    nextState.lastQuestionAsked = "ASK_CONNECT_BUYER";
+    nextState.lastUserIntent = "FIND_BUYER";
 
     if (executedTool.data && Array.isArray(executedTool.data)) {
       nextState.matchedBuyers = executedTool.data.map((b: any) => ({
@@ -216,177 +366,147 @@ export function processUserVoiceInput(
       }));
     }
 
-    responseHindi = `Ek achha bulk buyer mila hai — Rajesh Sharma. Ye bulk mein handmade baskets le rahe hain. Kya main aapki baat karwa doon?`;
-    responseDevanagari = `एक अच्छा बल्क बायर मिला है — राजेश शर्मा। ये बल्क में हैंडमेड बास्केट्स ले रहे हैं। क्या मैं आपकी बात करवा दूँ?`;
-    responseEnglish = `Found a good bulk buyer, Rajesh Sharma. Would you like me to connect you with him?`;
+    responseHindi = `Ek achha bulk buyer mila hai — Rajesh Sharma (ABC Handicrafts). Ye bulk mein handmade baskets le rahe hain. Kya main aapki baat karwa doon?`;
+    responseDevanagari = `एक अच्छा बल्क बायर मिला है — राजेश शर्मा (ABC हैंडीक्राफ्ट्स)। ये बल्क में हैंडमेड बास्केट्स ले रहे हैं। क्या मैं आपकी बात करवा दूँ?`;
+    responseEnglish = `Found a verified bulk buyer, Rajesh Sharma. Would you like me to connect you with him over call?`;
 
-    return {
-      spokenTextHindi: responseHindi,
-      spokenTextDevanagari: responseDevanagari,
-      spokenTextEnglish: responseEnglish,
-      updatedMemory: nextState,
-      executedTool,
-      conversationPhase: nextState.conversationPhase,
-    };
+    return formatResponse(responseHindi, responseDevanagari, responseEnglish, nextState, executedTool, "BUYER_DISCOVERY");
   }
 
-  // E. Connect to Buyer Call ("Baat karwao", "Call buyer", "Connect karo", "Haan", "Rajesh se baat karwao")
+  // F. MARKET PRICE QUERY ("Iska market rate kya hai", "Rate kya chal raha hai", "Mandi bhav", "Iska rate", "Price")
   if (
-    lower.includes("baat karwao") ||
-    lower.includes("call") ||
-    lower.includes("connect") ||
-    lower.includes("talk to") ||
-    lower.includes("rajesh") ||
-    (nextState.conversationPhase === "BUYER_DISCOVERY" && (lower.includes("haan") || lower.includes("yes") || lower.includes("karwa do")))
+    lower.includes("rate") ||
+    lower.includes("price") ||
+    lower.includes("market") ||
+    lower.includes("bhav") ||
+    lower.includes("bhaav") ||
+    lower.includes("daam") ||
+    input.includes("मंडी") ||
+    input.includes("भाव") ||
+    input.includes("दाम") ||
+    input.includes("रेट") ||
+    (nextState.lastQuestionAsked === "ASK_CHECK_MARKET_RATE" &&
+      (lower.includes("haan") || lower.includes("yes") || lower.includes("check") || input.includes("हाँ") || input.includes("चेक")))
   ) {
-    nextState.conversationPhase = "NEGOTIATION";
-    nextState.activeNegotiation.buyerId = "buyer-abc-01";
-    nextState.activeNegotiation.buyerName = "Rajesh Sharma (ABC Handicrafts)";
-    nextState.activeNegotiation.status = "CALLING";
-
-    responseHindi = `Okay, main aapko buyer se connect karti hoon.`;
-    responseDevanagari = `ओके, मैं आपको बायर से कनेक्ट करती हूँ।`;
-    responseEnglish = `Okay, connecting you directly with the buyer.`;
-
-    return {
-      spokenTextHindi: responseHindi,
-      spokenTextDevanagari: responseDevanagari,
-      spokenTextEnglish: responseEnglish,
-      updatedMemory: nextState,
-      executedTool: {
-        toolName: "startAgoraBuyerCall",
-        status: "SUCCESS",
-        summaryHindi: "Buyer call connected via Agora RTC.",
-        summaryDevanagari: "बायर कॉल कनेक्ट हो गई है।",
-        summaryEnglish: "Agora Voice channel connecting entrepreneur with buyer.",
-        data: { channelName: `sakhi-buyer-deal-${Date.now()}` },
-        actionRequired: "START_CALL",
-      },
-      conversationPhase: "NEGOTIATION",
-      actionTrigger: "OPEN_CALL_MODAL",
-    };
-  }
-
-  // F. Deal Confirmation ("Haan deal confirm kar do", "Confirm", "Pakki", "Theek hai")
-  if (
-    nextState.conversationPhase === "NEGOTIATION" &&
-    (lower.includes("haan") ||
-      lower.includes("yes") ||
-      lower.includes("confirm") ||
-      lower.includes("pakki") ||
-      lower.includes("theek hai") ||
-      lower.includes("record"))
-  ) {
-    executedTool = executeCreateDeal(
-      "buyer-abc-01",
-      nextState.product || "Handmade Baskets",
-      nextState.quantity || 150,
-      nextState.activeNegotiation.agreedFinalPrice || 205,
-      true
+    executedTool = executeGetMarketPrice(
+      nextState.product || "Handmade Basket",
+      nextState.location || "Greater Noida",
+      nextState.quantity || 100
     );
+    nextState.conversationPhase = "MARKET_CHECK";
+    nextState.lastQuestionAsked = "ASK_FIND_BUYERS";
+    nextState.lastUserIntent = "CHECK_MARKET_PRICE";
 
-    nextState.conversationPhase = "DEAL_CONFIRMATION";
-    nextState.activeNegotiation.status = "CONFIRMED";
+    if (executedTool.data) {
+      nextState.marketPriceRange = {
+        min: executedTool.data.minPrice,
+        max: executedTool.data.maxPrice,
+        suggested: executedTool.data.suggestedNegotiationStart,
+        source: executedTool.data.verifiedSource,
+        confidence: executedTool.data.confidence,
+      };
+    }
 
-    responseHindi = `Deal confirm ho gayi hai! Order database mein record ho gaya. Kya aapko production badhane ke liye koi loan ya support chahiye?`;
-    responseDevanagari = `डील कन्फर्म हो गई है! आर्डर डेटाबेस में रिकॉर्ड हो गया। क्या आपको प्रोडक्शन बढ़ाने के लिए कोई लोन या सपोर्ट चाहिए?`;
-    responseEnglish = `Deal confirmed and recorded! Would you also like to explore financial grants or loan support?`;
+    const min = nextState.marketPriceRange?.min || 180;
+    const max = nextState.marketPriceRange?.max || 220;
+    const start = nextState.marketPriceRange?.suggested || 220;
 
-    return {
-      spokenTextHindi: responseHindi,
-      spokenTextDevanagari: responseDevanagari,
-      spokenTextEnglish: responseEnglish,
-      updatedMemory: nextState,
-      executedTool,
-      conversationPhase: "DEAL_CONFIRMATION",
-    };
+    responseHindi = `Greater Noida mein baskets ka wholesale rate ₹${min} se ₹${max} chal raha hai. Aapko ₹${start} se baat shuru karni chahiye. Kya main verified buyers dhoondun?`;
+    responseDevanagari = `ग्रेटर नोएडा में बास्केट्स का होलसेल रेट ₹${min} से ₹${max} चल रहा है। आपको ₹${start} से बात शुरू करनी चाहिए। क्या मैं वेरिफाइड बायर्स ढूंढूं?`;
+    responseEnglish = `Wholesale rate is ₹${min} to ₹${max}. Start negotiation at ₹${start}. Shall I search verified buyers?`;
+
+    return formatResponse(responseHindi, responseDevanagari, responseEnglish, nextState, executedTool, "MARKET_CHECK");
   }
 
-  // G. Business Support / Loan / NGO ("Loan chahiye", "Financial support", "Business expand karna hai", "NGO", "Grant")
-  if (
-    lower.includes("support") ||
-    lower.includes("loan") ||
-    lower.includes("paise") ||
-    lower.includes("financial") ||
-    lower.includes("expand") ||
-    lower.includes("sahayata") ||
-    lower.includes("ngo") ||
-    lower.includes("grant") ||
-    lower.includes("madad")
-  ) {
-    executedTool = executeFindSupportOptions(input);
-    nextState.conversationPhase = "BUSINESS_SUPPORT";
-    nextState.supportRequirement.needed = true;
-    nextState.supportRequirement.purpose = "Production Capacity Expansion & Raw Materials";
-    nextState.supportRequirement.requestedAmount = "₹50,000";
+  // =========================================================================
+  // 4. DYNAMIC SINGLE-QUESTIONING (Collect only missing info step-by-step)
+  // =========================================================================
 
-    responseHindi = `Achha. Aap business expand karne ke liye support chahti hain? Ek support organization mili hai jo women entrepreneurs ke saath kaam karti hai — Sakhi Foundation. Kya main unse connect kar doon?`;
-    responseDevanagari = `अच्छा, आप बिज़नेस एक्सपैंड करने के लिए सपोर्ट चाहती हैं? एक सपोर्ट आर्गेनाइजेशन मिली है जो विमेन एंटरप्रेन्योर्स के साथ काम करती है — सखी फाउंडेशन। क्या मैं उनसे कनेक्ट कर दूँ?`;
-    responseEnglish = `Got it. An organization supporting women entrepreneurs is available. Would you like me to connect you with them?`;
+  // If product is known but quantity is missing
+  if (nextState.product && !nextState.quantity) {
+    nextState.conversationPhase = "PRODUCT_DISCOVERY";
+    nextState.lastQuestionAsked = "ASK_QUANTITY";
 
-    return {
-      spokenTextHindi: responseHindi,
-      spokenTextDevanagari: responseDevanagari,
-      spokenTextEnglish: responseEnglish,
-      updatedMemory: nextState,
-      executedTool,
-      conversationPhase: "BUSINESS_SUPPORT",
-    };
+    responseHindi = `Achha. Kitni quantity hai?`;
+    responseDevanagari = `अच्छा। कितनी क्वांटिटी है?`;
+    responseEnglish = `Nice. What quantity do you have available?`;
+
+    return formatResponse(responseHindi, responseDevanagari, responseEnglish, nextState, null, "PRODUCT_DISCOVERY");
   }
 
-  // H. Human Escalation ("Counselor se baat karwao", "Person se baat karni hai", "Haan", "Connect karo")
-  if (
-    nextState.conversationPhase === "BUSINESS_SUPPORT" ||
-    lower.includes("escalate") ||
-    lower.includes("counselor") ||
-    lower.includes("human") ||
-    lower.includes("person") ||
-    lower.includes("case") ||
-    (nextState.supportRequirement.needed &&
-      (lower.includes("haan") || lower.includes("yes") || lower.includes("connect") || lower.includes("karwa do")))
-  ) {
-    executedTool = executeCreateSupportCase(nextState, "₹50,000", "Production Capacity & Raw Material Expansion");
-    nextState.conversationPhase = "HUMAN_ESCALATION";
-    nextState.supportRequirement.escalationReady = true;
-    nextState.supportRequirement.ngoCaseId = executedTool.data.caseId;
-    nextState.supportRequirement.ngoName = executedTool.data.matchedOrganization.name;
+  // If product & quantity known, but selling intent is missing
+  if (nextState.product && nextState.quantity && !nextState.sellingIntent) {
+    nextState.conversationPhase = "PRODUCT_DISCOVERY";
+    nextState.lastQuestionAsked = "ASK_SELLING_INTENT";
 
-    responseHindi = `Is case mein ek person se baat karna better rahega. Main aapki details aur ab tak ki baat unke saath share kar deti hoon, taaki aapko sab kuch dobara na batana pade.`;
-    responseDevanagari = `इस केस में एक पर्सन से बात करना बेटर रहेगा। मैं आपकी डिटेल्स और अब तक की बात उनके साथ शेयर कर देती हूँ, ताकि आपको सब कुछ दोबारा ना बताना पड़े।`;
-    responseEnglish = `It's best to speak with a representative directly. I'll share your conversation context with them so you won't need to repeat anything.`;
+    responseHindi = `Okay, ${nextState.quantity} ${nextState.product === "Handmade Basket" ? "baskets" : nextState.product}. Aap bulk mein bechna chahti hain ya local market mein?`;
+    responseDevanagari = `ओके, ${nextState.quantity} बास्केट्स। आप बल्क में बेचना चाहती हैं या लोकल मार्केट में?`;
+    responseEnglish = `Okay, ${nextState.quantity} baskets. Do you want to sell in bulk or local market?`;
 
-    return {
-      spokenTextHindi: responseHindi,
-      spokenTextDevanagari: responseDevanagari,
-      spokenTextEnglish: responseEnglish,
-      updatedMemory: nextState,
-      executedTool,
-      conversationPhase: "HUMAN_ESCALATION",
-      actionTrigger: "OPEN_ESCALATION_MODAL",
-    };
+    return formatResponse(responseHindi, responseDevanagari, responseEnglish, nextState, null, "PRODUCT_DISCOVERY");
   }
 
-  // 4. NATURAL CONVERSATIONAL OPENER / DYNAMIC FOLLOW-UP
-  if (nextState.product && nextState.quantity) {
-    responseHindi = `Achha, ${nextState.quantity} ${nextState.product}. Aap inhe local market mein bechna chahti hain ya bulk mein?`;
-    responseDevanagari = `अच्छा, ${nextState.quantity} ${nextState.product}। आप इन्हें लोकल मार्केट में बेचना चाहती हैं या बल्क में?`;
-    responseEnglish = `Understood, ${nextState.quantity} ${nextState.product}. Would you like to sell in local markets or to bulk buyers?`;
-  } else if (nextState.product && !nextState.quantity) {
-    responseHindi = `Achha, ${nextState.product}. Aapke paas kitni quantity available hai?`;
-    responseDevanagari = `अच्छा, ${nextState.product}। आपके पास कितनी क्वांटिटी अवेलेबल है?`;
-    responseEnglish = `Great, ${nextState.product}. What quantity do you currently have available?`;
-  } else {
-    responseHindi = `Namaste! Aap kya bechna chahti hain—jaise handmade baskets, honey, ya koi aur product?`;
-    responseDevanagari = `नमस्ते! आप क्या बेचना चाहती हैं—जैसे हैंडमेड बास्केट्स, हनी या कोई और प्रोडक्ट?`;
-    responseEnglish = `Namaste! What product would you like to sell—such as handmade baskets, honey, or handicrafts?`;
+  // If product, quantity, sellingIntent known, but location is missing
+  if (nextState.product && nextState.quantity && nextState.sellingIntent && !nextState.location) {
+    nextState.conversationPhase = "PRODUCT_DISCOVERY";
+    nextState.lastQuestionAsked = "ASK_LOCATION";
+
+    responseHindi = `Theek hai. Main bulk buyers ke liye dekh sakti hoon. Aap kis area se hain?`;
+    responseDevanagari = `ठीक है। मैं बल्क बायर्स के लिए देख सकती हूँ। आप किस एरिया से हैं?`;
+    responseEnglish = `Great. I can check bulk buyers. Which area or district are you from?`;
+
+    return formatResponse(responseHindi, responseDevanagari, responseEnglish, nextState, null, "PRODUCT_DISCOVERY");
   }
+
+  // If all 4 core slots are filled! Offer market rate check
+  if (nextState.product && nextState.quantity && nextState.sellingIntent && nextState.location && nextState.conversationPhase === "PRODUCT_DISCOVERY") {
+    nextState.conversationPhase = "MARKET_CHECK";
+    nextState.lastQuestionAsked = "ASK_CHECK_MARKET_RATE";
+
+    responseHindi = `Got it. ${nextState.location} se ${nextState.quantity} ${nextState.product === "Handmade Basket" ? "baskets" : nextState.product}. Pehle market rate check karun?`;
+    responseDevanagari = `गॉट इट। ${nextState.location} से ${nextState.quantity} बास्केट्स। पहले मार्केट रेट चेक करूँ?`;
+    responseEnglish = `Got it. ${nextState.quantity} baskets in ${nextState.location}. Shall I check current market rates first?`;
+
+    return formatResponse(responseHindi, responseDevanagari, responseEnglish, nextState, null, "MARKET_CHECK");
+  }
+
+  // Default friendly guidance
+  nextState.lastQuestionAsked = "GREETING";
+  responseHindi = `Namaste Didi! Main aapki Sakhi hoon. Aap kya bechna ya jaanna chahti hain? Jaise baskets, shahad, mandi rate ya loan scheme.`;
+  responseDevanagari = `नमस्ते दीदी! मैं आपकी सखी हूँ। आप क्या बेचना या जानना चाहती हैं? जैसे टोकरियां, शहद, मंडी भाव या लोन योजना।`;
+  responseEnglish = `Namaste Didi! I am your Sakhi. What would you like to sell or explore today?`;
+
+  return formatResponse(responseHindi, responseDevanagari, responseEnglish, nextState, null, "GREETING");
+}
+
+function formatResponse(
+  hindi: string,
+  devanagari: string,
+  english: string,
+  state: BusinessMemoryState,
+  executedTool: ToolExecutionResult | null,
+  phase: BusinessMemoryState["conversationPhase"],
+  actionTrigger?: string,
+  interruptedTurn: boolean = false
+): AgentTurnResponse {
+  // Append AI message to history
+  const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  if (!state.conversationHistory) state.conversationHistory = [];
+  state.conversationHistory.push({
+    role: "assistant",
+    content: hindi,
+    timestamp,
+    toolCall: executedTool?.toolName,
+  });
 
   return {
-    spokenTextHindi: responseHindi,
-    spokenTextDevanagari: responseDevanagari,
-    spokenTextEnglish: responseEnglish,
-    updatedMemory: nextState,
-    executedTool: null,
-    conversationPhase: nextState.conversationPhase,
+    spokenTextHindi: hindi,
+    spokenTextDevanagari: devanagari,
+    spokenTextEnglish: english,
+    updatedMemory: state,
+    executedTool,
+    conversationPhase: phase,
+    actionTrigger,
+    interruptedTurn,
   };
 }

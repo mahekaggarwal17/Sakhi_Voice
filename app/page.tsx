@@ -255,15 +255,34 @@ export default function SakhiVoiceWebUI() {
       }
 
       let dynamicChips = [
-        "हाँ, मंडी भाव चेक करो",
-        "खरीदार से बात करवाओ",
-        "₹50,000 लोन योजना बताओ"
+        "मेरे पास 100 हस्तनिर्मित टोकरियाँ हैं",
+        "आज का मंडी भाव क्या है?",
+        "मुद्रा लोन की जानकारी चाहिए"
       ];
 
-      if (data.updatedMemory.conversationPhase === "MARKET_CHECK") {
-        dynamicChips = ["खरीदार दिखाओ", "रेट ₹220 से शुरू करो", "और जानकारी चाहिए"];
-      } else if (data.updatedMemory.conversationPhase === "BUYER_DISCOVERY") {
-        dynamicChips = ["राजेश शर्मा को कॉल लगाओ", "दूसरे खरीदार दिखाओ", "मंडी भाव फिर से बताओ"];
+      const phase = data.updatedMemory?.conversationPhase;
+      const missing = data.updatedMemory?.missingFields || [];
+
+      if (phase === "PRODUCT_DISCOVERY") {
+        if (missing.includes("quantity")) {
+          dynamicChips = ["100", "150 टोकरियाँ हैं", "200 यूनिट्स"];
+        } else if (missing.includes("sellingIntent")) {
+          dynamicChips = ["हाँ, थोक (Bulk) में", "लोकल मार्केट में", "Bulk mein bechna hai"];
+        } else if (missing.includes("location")) {
+          dynamicChips = ["Greater Noida", "जयपुर", "दिल्ली NCR"];
+        }
+      } else if (phase === "MARKET_CHECK") {
+        dynamicChips = ["हाँ, मंडी भाव चेक करो", "खरीदार दिखाओ", "रेट ₹220 से शुरू करो"];
+      } else if (phase === "BUYER_DISCOVERY") {
+        dynamicChips = ["राजेश शर्मा से बात करवाओ", "Actually 150 hain", "दूसरे खरीदार दिखाओ"];
+      } else if (phase === "NEGOTIATION") {
+        dynamicChips = ["कॉल लगाओ (Agora Call)", "हाँ, डील पक्की कर दो", "दाम और बढ़वाओ"];
+      } else if (phase === "DEAL_CONFIRMATION") {
+        dynamicChips = ["बिजनेस लोन और अनुदान चाहिए", "मुद्रा योजना बताओ", "धन्यवाद सखी"];
+      } else if (phase === "BUSINESS_SUPPORT") {
+        dynamicChips = ["हाँ, सेवा ऑफिसर को डिटेल्स भेज दो", "मुद्रा लोन योजना", "ट्रेनिंग सहायता"];
+      } else if (phase === "HUMAN_ESCALATION") {
+        dynamicChips = ["धन्यवाद दीदी", "नया संवाद शुरू करें"];
       }
 
       const aiMsgId = `ai-${Date.now()}`;
@@ -892,6 +911,73 @@ export default function SakhiVoiceWebUI() {
             <p className="mt-3 text-xs sm:text-sm font-semibold text-[#8C7B70] italic max-w-md">
               {currentSpeechText ? `"${currentSpeechText}"` : "माइक दबाकर अपनी बात बोलें..."}
             </p>
+          </div>
+
+          {/* LIVE SESSION MEMORY HUD (सत्र स्मृति - Real Context Display) */}
+          <div className="w-full bg-white/80 backdrop-blur-sm border-2 border-[#F2E4D4] rounded-3xl p-5 shadow-xs text-left">
+            <div className="flex items-center justify-between border-b border-[#F2E4D4] pb-2.5 mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm">🧠</span>
+                <span className="font-extrabold text-xs text-[#2D1F1B] uppercase tracking-wider">
+                  सत्र स्मृति (Live Session Memory HUD)
+                </span>
+              </div>
+              <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                सक्रिय सत्र (Active Session)
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+              <div className="bg-[#FFF8F0] p-2.5 rounded-2xl border border-[#F2E4D4]">
+                <span className="text-[10px] font-bold text-[#8C7B70] block uppercase">उत्पाद (Product)</span>
+                <span className="font-extrabold text-[#2D1F1B] truncate block mt-0.5">
+                  {businessMemory.product || "प्रतीक्षारत..."}
+                </span>
+              </div>
+
+              <div className="bg-[#FFF8F0] p-2.5 rounded-2xl border border-[#F2E4D4]">
+                <span className="text-[10px] font-bold text-[#8C7B70] block uppercase">मात्रा (Quantity)</span>
+                <span className="font-extrabold text-[#2D1F1B] truncate block mt-0.5">
+                  {businessMemory.quantity ? `${businessMemory.quantity} यूनिट्स` : "प्रतीक्षारत..."}
+                </span>
+              </div>
+
+              <div className="bg-[#FFF8F0] p-2.5 rounded-2xl border border-[#F2E4D4]">
+                <span className="text-[10px] font-bold text-[#8C7B70] block uppercase">स्थान (Location)</span>
+                <span className="font-extrabold text-[#2D1F1B] truncate block mt-0.5">
+                  {businessMemory.location || "प्रतीक्षारत..."}
+                </span>
+              </div>
+
+              <div className="bg-[#FFF8F0] p-2.5 rounded-2xl border border-[#F2E4D4]">
+                <span className="text-[10px] font-bold text-[#8C7B70] block uppercase">उद्देश्य (Intent)</span>
+                <span className="font-extrabold text-[#2D1F1B] truncate block mt-0.5">
+                  {businessMemory.sellingIntent
+                    ? businessMemory.sellingIntent === "bulk"
+                      ? "थोक (Bulk)"
+                      : "खुदरा (Retail)"
+                    : "प्रतीक्षारत..."}
+                </span>
+              </div>
+
+              <div className="bg-[#FFF8F0] p-2.5 rounded-2xl border border-[#F2E4D4]">
+                <span className="text-[10px] font-bold text-[#8C7B70] block uppercase">मंडी भाव (Mandi Rate)</span>
+                <span className="font-extrabold text-[#2D1F1B] truncate block mt-0.5">
+                  {businessMemory.marketPriceRange
+                    ? `₹${businessMemory.marketPriceRange.min}–₹${businessMemory.marketPriceRange.max}`
+                    : "जाँच नहीं हुई"}
+                </span>
+              </div>
+
+              <div className="bg-[#FFF8F0] p-2.5 rounded-2xl border border-[#F2E4D4]">
+                <span className="text-[10px] font-bold text-[#8C7B70] block uppercase">खरीदार (Buyer)</span>
+                <span className="font-extrabold text-[#2D1F1B] truncate block mt-0.5">
+                  {businessMemory.matchedBuyers && businessMemory.matchedBuyers.length > 0
+                    ? businessMemory.matchedBuyers[0].name
+                    : "कोई नहीं"}
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* Chat-Style Response Cards (Large Readable Text 20px+) */}
