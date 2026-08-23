@@ -344,7 +344,20 @@ export function processUserVoiceInput(
     input.includes("बात करवाओ") ||
     input.includes("बात करवा दो") ||
     input.includes("राजेश") ||
-    (nextState.lastQuestionAsked === "ASK_CONNECT_BUYER" && (lower.includes("haan") || lower.includes("yes") || lower.includes("karwa do") || input.includes("हाँ") || input.includes("करवाओ")))
+    (nextState.lastQuestionAsked === "ASK_CONNECT_BUYER" &&
+      (lower.includes("haan") ||
+        lower.includes("yes") ||
+        lower.includes("karwa do") ||
+        lower.includes("karwao") ||
+        lower.includes("call") ||
+        lower.includes("connect") ||
+        lower.includes("theek hai") ||
+        lower.includes("ok") ||
+        input.includes("हाँ") ||
+        input.includes("करवाओ") ||
+        input.includes("करवा दो") ||
+        input.includes("कॉल") ||
+        input.includes("ठीक है")))
   ) {
     nextState.conversationPhase = "NEGOTIATION";
     nextState.activeNegotiation.buyerId = "buyer-abc-01";
@@ -371,7 +384,7 @@ export function processUserVoiceInput(
     return formatResponse(responseHindi, responseDevanagari, responseEnglish, nextState, executedTool, "NEGOTIATION", actionTrigger);
   }
 
-  // E. FIND BUYERS ("Buyer dhoondo", "Kharidar dikhao", "Haan buyer check karo")
+  // E. FIND BUYERS ("Buyer dhoondo", "Kharidar dikhao", "Haan buyer check karo", "Haan", "Yes")
   if (
     lower.includes("buyer") ||
     lower.includes("kharidar") ||
@@ -381,7 +394,19 @@ export function processUserVoiceInput(
     input.includes("खरीदार") ||
     input.includes("व्यापारी") ||
     input.includes("बायर") ||
-    (nextState.lastQuestionAsked === "ASK_FIND_BUYERS" && (lower.includes("haan") || lower.includes("yes") || lower.includes("dhoondo") || input.includes("हाँ") || input.includes("दिखाओ")))
+    (nextState.lastQuestionAsked === "ASK_FIND_BUYERS" &&
+      (lower.includes("haan") ||
+        lower.includes("yes") ||
+        lower.includes("dhoondo") ||
+        lower.includes("dikhao") ||
+        lower.includes("theek hai") ||
+        lower.includes("ok") ||
+        lower.includes("batao") ||
+        input.includes("हाँ") ||
+        input.includes("दिखाओ") ||
+        input.includes("ढूंढो") ||
+        input.includes("ठीक है") ||
+        input.includes("बताओ")))
   ) {
     executedTool = executeFindBuyers(nextState.product || "Handmade Basket", nextState.quantity || 150);
     nextState.conversationPhase = "BUYER_DISCOVERY";

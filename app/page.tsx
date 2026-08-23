@@ -275,7 +275,91 @@ export default function SakhiVoiceWebUI() {
     };
   }, []);
 
-  // Voice Speaker with safety fallback
+  // Continuous Microphone Speech Recognition
+  const startListening = () => {
+    if (typeof window === "undefined") return;
+
+    if (currentAudioRef.current) {
+      try { currentAudioRef.current.pause(); } catch (e) {}
+      currentAudioRef.current = null;
+    }
+    if ("speechSynthesis" in window) {
+      try { window.speechSynthesis.cancel(); } catch (e) {}
+    }
+
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setVoiceState("IDLE");
+      return;
+    }
+
+    try {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch (e) {}
+        recognitionRef.current = null;
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = lang === "hi" ? "hi-IN" : "en-IN";
+      recognition.continuous = false;
+      recognition.interimResults = true;
+
+      recognition.onstart = () => {
+        setVoiceState("LISTENING");
+        setCurrentSpeechText(lang === "en" ? "Sakhi is listening... (Speak now)" : "सखी सुन रही है... (बोलिए)");
+      };
+
+      recognition.onresult = (event: any) => {
+        let interimTranscript = "";
+        let finalTranscript = "";
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+
+        const current = finalTranscript || interimTranscript;
+        if (current) {
+          setCurrentSpeechText(current);
+        }
+
+        if (finalTranscript && finalTranscript.trim()) {
+          try { recognition.stop(); } catch (e) {}
+          handleProcessTurn(finalTranscript.trim());
+        }
+      };
+
+      recognition.onerror = (err: any) => {
+        console.warn("Speech recognition notice:", err);
+        setVoiceState("IDLE");
+      };
+
+      recognition.onend = () => {
+        setVoiceState((prev) => (prev === "LISTENING" ? "IDLE" : prev));
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.warn("Speech recognition init error:", err);
+      setVoiceState("IDLE");
+    }
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch (e) {}
+      recognitionRef.current = null;
+    }
+    setVoiceState("IDLE");
+  };
+
+  // Voice Speaker with safety fallback & auto-listen continuation
   const speakText = (text: string, onComplete?: () => void) => {
     if (typeof window === "undefined") {
       if (onComplete) onComplete();
@@ -294,20 +378,30 @@ export default function SakhiVoiceWebUI() {
 
     setVoiceState("SPEAKING");
 
-    safetyTimeoutRef.current = setTimeout(() => {
+    const onAudioFinished = () => {
+      if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
       setVoiceState("IDLE");
-      if (onComplete) onComplete();
-    }, 6000);
+      currentAudioRef.current = null;
+      if (onComplete) {
+        onComplete();
+      } else {
+        // Continuous hands-free loop: auto-listen after Sakhi speaks!
+        setTimeout(() => {
+          startListening();
+        }, 400);
+      }
+    };
+
+    safetyTimeoutRef.current = setTimeout(() => {
+      onAudioFinished();
+    }, 7000);
 
     const audioUrl = `/api/tts?text=${encodeURIComponent(text.slice(0, 180))}&lang=${lang}`;
     const audio = new Audio(audioUrl);
     currentAudioRef.current = audio;
 
     audio.onended = () => {
-      if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
-      setVoiceState("IDLE");
-      currentAudioRef.current = null;
-      if (onComplete) onComplete();
+      onAudioFinished();
     };
 
     audio.onerror = () => {
@@ -318,23 +412,17 @@ export default function SakhiVoiceWebUI() {
           utterance.rate = 0.95;
           utterance.pitch = 1.05;
           utterance.onend = () => {
-            if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
-            setVoiceState("IDLE");
-            if (onComplete) onComplete();
+            onAudioFinished();
           };
           utterance.onerror = () => {
-            if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
-            setVoiceState("IDLE");
-            if (onComplete) onComplete();
+            onAudioFinished();
           };
           window.speechSynthesis.speak(utterance);
         } catch (e) {
-          setVoiceState("IDLE");
-          if (onComplete) onComplete();
+          onAudioFinished();
         }
       } else {
-        setVoiceState("IDLE");
-        if (onComplete) onComplete();
+        onAudioFinished();
       }
     };
 
@@ -343,13 +431,14 @@ export default function SakhiVoiceWebUI() {
         try {
           const utterance = new SpeechSynthesisUtterance(text);
           utterance.lang = lang === "hi" ? "hi-IN" : "en-IN";
-          utterance.onend = () => setVoiceState("IDLE");
+          utterance.onend = () => onAudioFinished();
+          utterance.onerror = () => onAudioFinished();
           window.speechSynthesis.speak(utterance);
         } catch (e) {
-          setVoiceState("IDLE");
+          onAudioFinished();
         }
       } else {
-        setVoiceState("IDLE");
+        onAudioFinished();
       }
     });
   };
@@ -358,14 +447,12 @@ export default function SakhiVoiceWebUI() {
   const handleProcessTurn = async (userUtterance: string, isInterruption = false) => {
     if (!userUtterance || !userUtterance.trim()) return;
 
-    if (isInterruption) {
-      if (currentAudioRef.current) {
-        try { currentAudioRef.current.pause(); } catch (e) {}
-        currentAudioRef.current = null;
-      }
-      if ("speechSynthesis" in window) {
-        try { window.speechSynthesis.cancel(); } catch (e) {}
-      }
+    if (currentAudioRef.current) {
+      try { currentAudioRef.current.pause(); } catch (e) {}
+      currentAudioRef.current = null;
+    }
+    if ("speechSynthesis" in window) {
+      try { window.speechSynthesis.cancel(); } catch (e) {}
     }
 
     const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -464,6 +551,10 @@ export default function SakhiVoiceWebUI() {
       speakText(textToSpeak, () => {
         if (data.triggerBuyerCall && data.selectedBuyer) {
           setActiveBuyerCall(data.selectedBuyer);
+        } else {
+          setTimeout(() => {
+            startListening();
+          }, 400);
         }
       });
     } catch (e) {
@@ -488,72 +579,11 @@ export default function SakhiVoiceWebUI() {
     }
 
     if (voiceState === "LISTENING") {
-      if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch (e) {}
-      }
-      setVoiceState("IDLE");
+      stopListening();
       return;
     }
 
-    if (typeof window !== "undefined") {
-      const SpeechRecognition =
-        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-      if (SpeechRecognition) {
-        try {
-          const recognition = new SpeechRecognition();
-          recognition.lang = lang === "hi" ? "hi-IN" : "en-IN";
-          recognition.continuous = false;
-          recognition.interimResults = true;
-
-          recognition.onstart = () => {
-            setVoiceState("LISTENING");
-            setCurrentSpeechText(lang === "en" ? "Sakhi is listening... (Speak now)" : "सखी सुन रही है... (Speak now)");
-          };
-
-          recognition.onresult = (event: any) => {
-            let interimTranscript = "";
-            let finalTranscript = "";
-
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-              if (event.results[i].isFinal) {
-                finalTranscript += event.results[i][0].transcript;
-              } else {
-                interimTranscript += event.results[i][0].transcript;
-              }
-            }
-
-            const current = finalTranscript || interimTranscript;
-            if (current) {
-              setCurrentSpeechText(current);
-            }
-
-            if (finalTranscript) {
-              handleProcessTurn(finalTranscript);
-            }
-          };
-
-          recognition.onerror = (err: any) => {
-            console.warn("Speech recognition notice:", err);
-            setVoiceState("IDLE");
-            setCurrentSpeechText(t.voiceMicTapHint);
-          };
-
-          recognition.onend = () => {
-            setVoiceState((prev) => (prev === "LISTENING" ? "IDLE" : prev));
-          };
-
-          recognitionRef.current = recognition;
-          recognition.start();
-          return;
-        } catch (e) {
-          console.warn("Speech recognition fallback:", e);
-        }
-      }
-    }
-
-    setVoiceState("IDLE");
-    setCurrentSpeechText(t.voiceMicTapHint);
+    startListening();
   };
 
   return (
