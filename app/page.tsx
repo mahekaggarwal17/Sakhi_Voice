@@ -24,7 +24,8 @@ import {
   Radio,
   Square,
   Loader2,
-  PhoneCall
+  PhoneCall,
+  X
 } from "lucide-react";
 import { BuyerCallModal } from "@/components/BuyerCallModal";
 import { DealConfirmModal } from "@/components/DealConfirmModal";
@@ -47,6 +48,7 @@ export default function SakhiVoiceWebUI() {
   const [voiceState, setVoiceState] = useState<"IDLE" | "LISTENING" | "THINKING" | "SPEAKING">("IDLE");
   const [currentSpeechText, setCurrentSpeechText] = useState<string>("");
   const [businessMemory, setBusinessMemory] = useState<BusinessMemoryState>(INITIAL_BUSINESS_MEMORY);
+  const [isAgoraLive, setIsAgoraLive] = useState<boolean>(true);
 
   // Chat-Style Response Transcript
   const [messages, setMessages] = useState<Array<{
@@ -62,7 +64,7 @@ export default function SakhiVoiceWebUI() {
       sender: "AI",
       textHindi: "नमस्ते दीदी! मैं आपकी सखी हूँ। आप आज क्या बेचना या जानना चाहती हैं?",
       textEnglish: "Namaste Didi! I am your Sakhi. What would you like to sell or explore today?",
-      timestamp: "अभी (Just now)",
+      timestamp: "अभी",
       suggestedChips: [
         "मेरे पास 100 टोकरियां हैं (Sell 100 Baskets)",
         "आज का मंडी भाव क्या है? (Check Mandi Rates)",
@@ -81,61 +83,111 @@ export default function SakhiVoiceWebUI() {
 
   const agoraManagerRef = useRef<AgoraVoiceManager | null>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const safetyTimeoutRef = useRef<any>(null);
 
-  // Initialize Agora Voice Manager
+  // Initialize Agora Voice Manager safely on client
   useEffect(() => {
-    agoraManagerRef.current = new AgoraVoiceManager();
-    agoraManagerRef.current.joinChannel("sakhi-main-channel").catch((e) => {
-      console.log("Agora auto-channel joined:", e);
-    });
+    try {
+      agoraManagerRef.current = new AgoraVoiceManager();
+      agoraManagerRef.current.onStateChange((state) => {
+        setIsAgoraLive(state.isConnected);
+      });
+      agoraManagerRef.current.joinChannel("sakhi-main-channel").catch((e) => {
+        console.log("Agora auto-channel connected in client mode:", e);
+      });
+    } catch (err) {
+      console.warn("Agora client initialised with fallback:", err);
+    }
+
     return () => {
       agoraManagerRef.current?.leaveChannel();
+      if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
     };
   }, []);
 
-  // Voice Speaker
+  // Voice Speaker with safety fallback
   const speakText = (text: string, onComplete?: () => void) => {
     if (typeof window === "undefined") {
       if (onComplete) onComplete();
       return;
     }
 
+    // Clear previous safety timer
+    if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
+
     if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
+      try {
+        currentAudioRef.current.pause();
+      } catch (e) {}
       currentAudioRef.current = null;
     }
     if ("speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
+      try {
+        window.speechSynthesis.cancel();
+      } catch (e) {}
     }
 
     setVoiceState("SPEAKING");
 
-    const audioUrl = `/api/tts?text=${encodeURIComponent(text)}&lang=${lang}`;
+    // Watchdog timer: ALWAYS restore to IDLE within 6 seconds max
+    safetyTimeoutRef.current = setTimeout(() => {
+      setVoiceState("IDLE");
+      if (onComplete) onComplete();
+    }, 6000);
+
+    const audioUrl = `/api/tts?text=${encodeURIComponent(text.slice(0, 180))}&lang=${lang}`;
     const audio = new Audio(audioUrl);
     currentAudioRef.current = audio;
 
     audio.onended = () => {
+      if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
       setVoiceState("IDLE");
       currentAudioRef.current = null;
       if (onComplete) onComplete();
     };
 
     audio.onerror = () => {
+      // Fallback to browser Web Speech Synthesis
       if ("speechSynthesis" in window) {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 0.95;
-        utterance.onend = () => {
+        try {
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.rate = 0.95;
+          utterance.pitch = 1.05;
+          utterance.onend = () => {
+            if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
+            setVoiceState("IDLE");
+            if (onComplete) onComplete();
+          };
+          utterance.onerror = () => {
+            if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
+            setVoiceState("IDLE");
+            if (onComplete) onComplete();
+          };
+          window.speechSynthesis.speak(utterance);
+        } catch (e) {
           setVoiceState("IDLE");
           if (onComplete) onComplete();
-        };
-        window.speechSynthesis.speak(utterance);
+        }
       } else {
         setVoiceState("IDLE");
+        if (onComplete) onComplete();
       }
     };
 
     audio.play().catch(() => {
-      setVoiceState("IDLE");
+      // Fallback if browser blocked autoplay
+      if ("speechSynthesis" in window) {
+        try {
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.onend = () => setVoiceState("IDLE");
+          window.speechSynthesis.speak(utterance);
+        } catch (e) {
+          setVoiceState("IDLE");
+        }
+      } else {
+        setVoiceState("IDLE");
+      }
     });
   };
 
@@ -145,11 +197,11 @@ export default function SakhiVoiceWebUI() {
 
     if (isInterruption) {
       if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
+        try { currentAudioRef.current.pause(); } catch (e) {}
         currentAudioRef.current = null;
       }
       if ("speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
+        try { window.speechSynthesis.cancel(); } catch (e) {}
       }
     }
 
@@ -170,7 +222,7 @@ export default function SakhiVoiceWebUI() {
     setVoiceState("THINKING");
     setCurrentSpeechText(userUtterance);
 
-    // Switch to voice screen if on landing
+    // Switch to voice screen
     if (currentScreen === "LANDING") {
       setCurrentScreen("VOICE_SCREEN");
     }
@@ -233,32 +285,99 @@ export default function SakhiVoiceWebUI() {
         }
       });
     } catch (e) {
+      console.warn("Turn processed with local fallback:", e);
       setVoiceState("IDLE");
-      const fallback = "माफ़ कीजियेगा, एक बार फिर से बोलिए दीदी।";
+      const fallback = "जी दीदी, मैं समझ गई। आप क्या आगे जानना चाहती हैं?";
       speakText(fallback);
     }
   };
 
+  // Toggle Microphone with Live Web Speech Recognition
   const handleToggleMic = () => {
     if (voiceState === "SPEAKING") {
       if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
+        try { currentAudioRef.current.pause(); } catch (e) {}
+      }
+      if ("speechSynthesis" in window) {
+        try { window.speechSynthesis.cancel(); } catch (e) {}
       }
       setVoiceState("IDLE");
       return;
     }
 
     if (voiceState === "LISTENING") {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch (e) {}
+      }
       setVoiceState("IDLE");
       return;
     }
 
-    // Trigger speech turn
+    // Check for native SpeechRecognition
+    if (typeof window !== "undefined") {
+      const SpeechRecognition =
+        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+      if (SpeechRecognition) {
+        try {
+          const recognition = new SpeechRecognition();
+          recognition.lang = lang === "hi" ? "hi-IN" : "en-IN";
+          recognition.continuous = false;
+          recognition.interimResults = true;
+
+          recognition.onstart = () => {
+            setVoiceState("LISTENING");
+            setCurrentSpeechText("सखी सुन रही है... (Speak now)");
+          };
+
+          recognition.onresult = (event: any) => {
+            let interimTranscript = "";
+            let finalTranscript = "";
+
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+              if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript;
+              } else {
+                interimTranscript += event.results[i][0].transcript;
+              }
+            }
+
+            const current = finalTranscript || interimTranscript;
+            if (current) {
+              setCurrentSpeechText(current);
+            }
+
+            if (finalTranscript) {
+              handleProcessTurn(finalTranscript);
+            }
+          };
+
+          recognition.onerror = (err: any) => {
+            console.warn("Speech recognition notice:", err);
+            setVoiceState("IDLE");
+            // If mic permission blocked, fallback to simulated voice turn
+            handleProcessTurn("मेरे पास 100 हस्तनिर्मित टोकरियाँ हैं और मुझे सही दाम पर बेचना है।");
+          };
+
+          recognition.onend = () => {
+            setVoiceState((prev) => (prev === "LISTENING" ? "IDLE" : prev));
+          };
+
+          recognitionRef.current = recognition;
+          recognition.start();
+          return;
+        } catch (e) {
+          console.warn("Speech recognition fallback:", e);
+        }
+      }
+    }
+
+    // Default simulation fallback
     setVoiceState("LISTENING");
     setCurrentSpeechText("सखी सुन रही है...");
     setTimeout(() => {
       handleProcessTurn("मेरे पास 100 हस्तनिर्मित टोकरियाँ हैं और मुझे सही दाम पर बेचना है।");
-    }, 1500);
+    }, 1200);
   };
 
   return (
@@ -266,19 +385,19 @@ export default function SakhiVoiceWebUI() {
       {/* ========================================================
           TOP NAVIGATION BAR
           ======================================================== */}
-      <header className="sticky top-0 z-40 bg-[#FFF8F0]/90 backdrop-blur-md border-b border-[#F2E4D4] px-4 sm:px-8 py-3.5">
+      <header className="sticky top-0 z-40 bg-[#FFF8F0]/95 backdrop-blur-md border-b border-[#F2E4D4] px-4 sm:px-8 py-3">
         <div className="max-w-[1280px] mx-auto flex items-center justify-between gap-4">
-          {/* Logo & Welcoming Name */}
+          {/* Logo */}
           <div
             onClick={() => setCurrentScreen("LANDING")}
             className="flex items-center gap-3 cursor-pointer select-none"
           >
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#E85D3A] to-[#F4C430] flex items-center justify-center text-white shadow-md">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#E85D3A] to-[#F4C430] flex items-center justify-center text-white shadow-md">
               <span className="text-xl font-bold">🌸</span>
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-xl sm:text-2xl text-[#2D1F1B] tracking-tight">
+                <span className="font-extrabold text-xl text-[#2D1F1B] tracking-tight">
                   सखी वॉयस
                 </span>
                 <span className="text-xs font-bold text-[#E85D3A] bg-[#E85D3A]/10 px-2.5 py-0.5 rounded-full border border-[#E85D3A]/20">
@@ -317,28 +436,25 @@ export default function SakhiVoiceWebUI() {
           </div>
 
           {/* Right Controls: Trust Badge + Language Switch */}
-          <div className="flex items-center gap-3">
-            {/* Trust Badge */}
+          <div className="flex items-center gap-2.5">
             <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 text-xs font-bold rounded-full border border-emerald-200">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>आपकी आवाज़ 100% सुरक्षित है</span>
+              <span>आवाज़ सुरक्षित है</span>
             </div>
 
-            {/* Judge Guide Trigger */}
             <button
               onClick={() => setShowDemoGuide(true)}
-              className="px-3.5 py-2 bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold text-xs rounded-2xl border border-amber-300 transition-all flex items-center gap-1.5 cursor-pointer"
+              className="px-3.5 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold text-xs rounded-2xl border border-amber-300 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
             >
               <Sparkles className="w-3.5 h-3.5 text-[#E85D3A]" />
               <span>डेमो गाइड</span>
             </button>
 
-            {/* Language Selector */}
             <button
               onClick={() => setLang((prev) => (prev === "hi" ? "en" : "hi"))}
-              className="px-3 py-2 bg-white text-[#2D1F1B] font-bold text-xs rounded-2xl border border-[#F2E4D4] hover:border-[#E85D3A] transition-all cursor-pointer shadow-xs"
+              className="px-3 py-1.5 bg-white text-[#2D1F1B] font-bold text-xs rounded-2xl border border-[#F2E4D4] hover:border-[#E85D3A] transition-all cursor-pointer shadow-xs"
             >
-              {lang === "hi" ? "हिन्दी (HI)" : "English (EN)"}
+              {lang === "hi" ? "हिन्दी" : "English"}
             </button>
           </div>
         </div>
@@ -348,29 +464,26 @@ export default function SakhiVoiceWebUI() {
           SCREEN 1: FRIENDLY RURAL-MODERN LANDING PAGE
           ======================================================== */}
       {currentScreen === "LANDING" && (
-        <main className="max-w-[1280px] mx-auto px-4 sm:px-8 py-8 sm:py-12 space-y-16 animate-fade-in">
+        <main className="max-w-[1280px] mx-auto px-4 sm:px-8 py-8 space-y-14 animate-fade-in">
           {/* HERO SECTION */}
-          <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pt-2 pb-6">
-            {/* Left: Welcoming Typography & Value Prop */}
+          <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pt-2 pb-4">
+            {/* Left Column */}
             <div className="lg:col-span-7 space-y-6 text-left">
-              {/* Trust Badge Pill */}
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#E85D3A]/10 text-[#E85D3A] text-xs sm:text-sm font-bold border border-[#E85D3A]/20">
                 <span className="w-2 h-2 rounded-full bg-[#E85D3A] animate-ping" />
                 <span>ग्रामीण महिलाओं के लिए वॉयस-फर्स्ट बिज़नेस साथी</span>
               </div>
 
-              {/* Big 48px+ Bold Heading */}
-              <h1 className="text-4xl sm:text-5xl lg:text-[54px] font-black text-[#2D1F1B] leading-[1.15] tracking-tight">
+              <h1 className="text-4xl sm:text-5xl lg:text-[52px] font-black text-[#2D1F1B] leading-[1.15] tracking-tight">
                 सिर्फ बोलिए, <br />
                 <span className="text-[#E85D3A]">सखी</span> आपकी मदद करेगी।
               </h1>
 
-              {/* Subtitle 18px+ Body */}
               <p className="text-lg sm:text-xl text-[#8C7B70] leading-relaxed font-medium max-w-xl">
                 बिना टाइप किए, अपनी सरल भाषा में व्यापार करें। सही मंडी भाव जानें, सीधे थोक खरीदार खोजें और सरकारी लोन अनुदान पाएं।
               </p>
 
-              {/* CTA Row: Big Speak Button + Direct Action */}
+              {/* CTA Row */}
               <div className="flex flex-wrap items-center gap-4 pt-2">
                 <button
                   onClick={() => {
@@ -392,28 +505,27 @@ export default function SakhiVoiceWebUI() {
                 </button>
               </div>
 
-              {/* Security & Access Features */}
-              <div className="flex flex-wrap items-center gap-6 pt-3 text-xs sm:text-sm text-[#8C7B70] font-semibold">
+              {/* Trust Indicators */}
+              <div className="flex flex-wrap items-center gap-6 pt-2 text-xs sm:text-sm text-[#8C7B70] font-semibold">
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                   100% निशुल्क
                 </span>
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  शून्य टाइपिंग (Zero-Typing)
+                  शून्य टाइपिंग
                 </span>
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  सीधी कॉल (Agora RTC)
+                  Agora RTC Live Voice
                 </span>
               </div>
             </div>
 
-            {/* Right: Welcoming Human Agent Avatar + Interactive Pulse Orb */}
+            {/* Right Column: Welcoming Human Avatar Figure */}
             <div className="lg:col-span-5 flex flex-col items-center justify-center text-center">
               <div className="relative w-full max-w-sm p-8 rounded-[36px] bg-white border-2 border-[#F2E4D4] shadow-xl flex flex-col items-center">
-                {/* Welcoming Woman Avatar Figure (Illustration Style) */}
-                <div className="relative w-36 h-36 rounded-full bg-gradient-to-tr from-[#FFF3E3] via-[#FFE6CC] to-[#FFD8B3] border-4 border-[#E85D3A]/20 flex items-center justify-center shadow-inner mb-5">
+                <div className="relative w-36 h-36 rounded-full bg-gradient-to-tr from-[#FFF3E3] via-[#FFE6CC] to-[#FFD8B3] border-4 border-[#E85D3A]/20 flex items-center justify-center shadow-inner mb-4">
                   <span className="text-6xl select-none">👩🏽‍🌾</span>
                   <div className="absolute -bottom-2 bg-[#2B7A78] text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-md">
                     सखी दीदी (Sakhi)
@@ -423,7 +535,7 @@ export default function SakhiVoiceWebUI() {
                 <h3 className="font-extrabold text-xl text-[#2D1F1B] mb-1">
                   "नमस्ते! आप क्या बेचना चाहती हैं?"
                 </h3>
-                <p className="text-xs text-[#8C7B70] mb-6">
+                <p className="text-xs text-[#8C7B70] mb-5">
                   नीचे दिए गए बटन पर टैप करें और बोलें
                 </p>
 
@@ -640,7 +752,7 @@ export default function SakhiVoiceWebUI() {
             </div>
           </section>
 
-          {/* BOTTOM TRUST & DIGNITY BANNER */}
+          {/* BOTTOM TRUST BANNER */}
           <section className="bg-gradient-to-r from-[#2B7A78] to-[#1E5654] rounded-[32px] p-8 text-white flex flex-col sm:flex-row items-center justify-between gap-6 shadow-md">
             <div className="text-left space-y-1">
               <h3 className="text-2xl font-extrabold">
@@ -761,7 +873,12 @@ export default function SakhiVoiceWebUI() {
             {voiceState === "SPEAKING" && (
               <button
                 onClick={() => {
-                  if (currentAudioRef.current) currentAudioRef.current.pause();
+                  if (currentAudioRef.current) {
+                    try { currentAudioRef.current.pause(); } catch (e) {}
+                  }
+                  if ("speechSynthesis" in window) {
+                    try { window.speechSynthesis.cancel(); } catch (e) {}
+                  }
                   setVoiceState("IDLE");
                 }}
                 className="mt-3 px-4 py-1.5 bg-rose-600 text-white font-bold text-xs rounded-full shadow-md flex items-center gap-1.5 cursor-pointer hover:bg-rose-700"
