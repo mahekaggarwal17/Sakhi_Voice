@@ -238,13 +238,18 @@ export default function SakhiVoiceApp() {
     }
   };
 
-  // Toggle Live Microphone via Web Speech Recognition
+  // Toggle Live Microphone via Web Speech Recognition & Agora
   const handleToggleMic = () => {
     if (voiceState === "LISTENING") {
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {
+          console.warn("Recognition stop error:", e);
+        }
       }
       setVoiceState("IDLE");
+      setCurrentSpeechText("");
       return;
     }
 
@@ -254,40 +259,50 @@ export default function SakhiVoiceApp() {
     }
 
     if (typeof window !== "undefined" && ("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.lang = lang === "hi" ? "hi-IN" : "en-IN";
+      try {
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.lang = lang === "hi" ? "hi-IN" : "en-IN";
 
-      recognition.onstart = () => {
+        recognition.onstart = () => {
+          setVoiceState("LISTENING");
+          setCurrentSpeechText("Listening... (बोलिए)");
+        };
+
+        recognition.onresult = (event: any) => {
+          const transcriptText = Array.from(event.results)
+            .map((r: any) => r[0].transcript)
+            .join("");
+          setCurrentSpeechText(transcriptText);
+          if (event.results[0].isFinal) {
+            handleProcessTurn(transcriptText);
+          }
+        };
+
+        recognition.onerror = (e: any) => {
+          console.warn("Speech recognition notice/fallback:", e.error);
+          if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+            setCurrentSpeechText("Microphone permission needed. You can also click the quick voice chips below!");
+          }
+          setVoiceState("IDLE");
+        };
+
+        recognition.onend = () => {
+          setVoiceState((prev) => (prev === "LISTENING" ? "IDLE" : prev));
+        };
+
+        recognitionRef.current = recognition;
+        recognition.start();
         setVoiceState("LISTENING");
-        setCurrentSpeechText("Listening...");
-      };
-
-      recognition.onresult = (event: any) => {
-        const transcriptText = Array.from(event.results)
-          .map((r: any) => r[0].transcript)
-          .join("");
-        setCurrentSpeechText(transcriptText);
-        if (event.results[0].isFinal) {
-          handleProcessTurn(transcriptText);
-        }
-      };
-
-      recognition.onerror = (e: any) => {
-        console.warn("Speech recognition error:", e);
+        setCurrentSpeechText("Listening... (बोलिए)");
+      } catch (err) {
+        console.warn("Mic start caught error:", err);
         setVoiceState("IDLE");
-      };
-
-      recognition.onend = () => {
-        setVoiceState((prev) => (prev === "LISTENING" ? "IDLE" : prev));
-      };
-
-      recognitionRef.current = recognition;
-      recognition.start();
+      }
     } else {
-      // Fallback speech simulation for browser environments without speech recognition
+      // Fallback speech simulation
       handleProcessTurn("Mere paas 100 handmade baskets hain aur mujhe bechna hai.");
     }
   };
