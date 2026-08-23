@@ -277,9 +277,15 @@ export default function SakhiVoiceWebUI() {
     };
   }, []);
 
+  const lastSpokenTextRef = useRef<string>("");
+  const isSpeakingRef = useRef<boolean>(false);
+
   // Continuous Microphone Speech Recognition
   const startListening = () => {
     if (typeof window === "undefined") return;
+
+    // Do not listen while assistant is still speaking
+    if (isSpeakingRef.current) return;
 
     if (currentAudioRef.current) {
       try { currentAudioRef.current.pause(); } catch (e) {}
@@ -309,11 +315,17 @@ export default function SakhiVoiceWebUI() {
       recognition.interimResults = true;
 
       recognition.onstart = () => {
+        if (isSpeakingRef.current) {
+          try { recognition.abort(); } catch (e) {}
+          return;
+        }
         setVoiceState("LISTENING");
         setCurrentSpeechText(lang === "en" ? "Sakhi is listening... (Speak now)" : "सखी सुन रही है... (बोलिए)");
       };
 
       recognition.onresult = (event: any) => {
+        if (isSpeakingRef.current) return;
+
         let interimTranscript = "";
         let finalTranscript = "";
 
@@ -331,8 +343,13 @@ export default function SakhiVoiceWebUI() {
         }
 
         if (finalTranscript && finalTranscript.trim()) {
+          const trimmed = finalTranscript.trim();
+          // Echo prevention: ignore if microphone picked up Sakhi's own last spoken words
+          if (lastSpokenTextRef.current && (trimmed === lastSpokenTextRef.current.trim() || lastSpokenTextRef.current.includes(trimmed))) {
+            return;
+          }
           try { recognition.stop(); } catch (e) {}
-          handleProcessTurn(finalTranscript.trim());
+          handleProcessTurn(trimmed);
         }
       };
 
@@ -361,90 +378,110 @@ export default function SakhiVoiceWebUI() {
     setVoiceState("IDLE");
   };
 
-  // Ultra-Low Latency Speech Synthesizer (<60ms startup)
+  // Dedicated Single-Engine Speech Synthesizer (Zero Dual-Voice Overlap)
   const speakText = (text: string, onComplete?: () => void) => {
-    if (typeof window === "undefined") {
+    if (typeof window === "undefined" || !text) {
       if (onComplete) onComplete();
       return;
     }
 
     if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
 
+    // Stop listening immediately while speaking
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch (e) {}
+    }
+
+    // Stop and cancel any existing audio or speech synthesis completely
     if (currentAudioRef.current) {
-      try { currentAudioRef.current.pause(); } catch (e) {}
+      try {
+        currentAudioRef.current.pause();
+        currentAudioRef.current.currentTime = 0;
+      } catch (e) {}
       currentAudioRef.current = null;
     }
     if ("speechSynthesis" in window) {
       try { window.speechSynthesis.cancel(); } catch (e) {}
     }
 
+    isSpeakingRef.current = true;
+    lastSpokenTextRef.current = text;
     setVoiceState("SPEAKING");
 
+    let hasFinished = false;
     const onAudioFinished = () => {
+      if (hasFinished) return;
+      hasFinished = true;
       if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
+      isSpeakingRef.current = false;
       setVoiceState("IDLE");
       currentAudioRef.current = null;
+
       if (onComplete) {
         onComplete();
-      } else {
-        // Continuous hands-free loop: auto-listen after Sakhi speaks!
-        setTimeout(() => {
-          startListening();
-        }, 300);
       }
     };
 
-    const fallbackToAudioStream = () => {
-      try {
-        const audioUrl = `/api/tts?text=${encodeURIComponent(text.slice(0, 180))}&lang=${lang}`;
-        const audio = new Audio(audioUrl);
-        currentAudioRef.current = audio;
+    // Use high-fidelity natural audio stream with strict single playback
+    try {
+      const audioUrl = `/api/tts?text=${encodeURIComponent(text.slice(0, 200))}&lang=${lang}`;
+      const audio = new Audio(audioUrl);
+      currentAudioRef.current = audio;
 
-        audio.onended = () => onAudioFinished();
-        audio.onerror = () => onAudioFinished();
+      audio.onended = () => onAudioFinished();
+      audio.onerror = () => {
+        // Fallback to Native Speech Synthesis only if audio stream fails
+        if ("speechSynthesis" in window) {
+          try {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = lang === "hi" ? "hi-IN" : "en-IN";
+            utterance.rate = 1.0;
+            utterance.pitch = 1.05;
 
-        audio.play().catch(() => {
+            const voices = window.speechSynthesis.getVoices();
+            const preferredVoice = voices.find(
+              (v) => (lang === "hi" ? v.lang.startsWith("hi") : v.lang.startsWith("en-IN") || v.lang.startsWith("en"))
+            );
+            if (preferredVoice) utterance.voice = preferredVoice;
+
+            utterance.onend = () => onAudioFinished();
+            utterance.onerror = (e) => {
+              if (e.error !== "interrupted" && e.error !== "canceled") {
+                onAudioFinished();
+              }
+            };
+
+            window.speechSynthesis.speak(utterance);
+            return;
+          } catch (err) {
+            onAudioFinished();
+          }
+        } else {
           onAudioFinished();
-        });
-      } catch (err) {
-        onAudioFinished();
-      }
-    };
-
-    // Primary: Zero-Latency Native Speech Synthesis
-    if ("speechSynthesis" in window) {
-      try {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = lang === "hi" ? "hi-IN" : "en-IN";
-        utterance.rate = 1.0;
-        utterance.pitch = 1.05;
-
-        const voices = window.speechSynthesis.getVoices();
-        const preferredVoice = voices.find(
-          (v) => (lang === "hi" ? v.lang.startsWith("hi") : v.lang.startsWith("en-IN") || v.lang.startsWith("en"))
-        );
-        if (preferredVoice) {
-          utterance.voice = preferredVoice;
         }
+      };
 
-        utterance.onend = () => onAudioFinished();
-        utterance.onerror = (e) => {
-          console.warn("SpeechSynthesis notice, using fallback:", e);
-          fallbackToAudioStream();
-        };
+      safetyTimeoutRef.current = setTimeout(() => {
+        onAudioFinished();
+      }, 12000);
 
-        safetyTimeoutRef.current = setTimeout(() => {
-          onAudioFinished();
-        }, 8000);
-
-        window.speechSynthesis.speak(utterance);
-        return;
-      } catch (err) {
-        console.warn("Native speech init fallback:", err);
-      }
+      audio.play().catch(() => {
+        // If autoplay blocked, try native speech
+        if ("speechSynthesis" in window) {
+          try {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = lang === "hi" ? "hi-IN" : "en-IN";
+            utterance.onend = () => onAudioFinished();
+            utterance.onerror = () => onAudioFinished();
+            window.speechSynthesis.speak(utterance);
+            return;
+          } catch (err) {}
+        }
+        onAudioFinished();
+      });
+    } catch (err) {
+      onAudioFinished();
     }
-
-    fallbackToAudioStream();
   };
 
   // Turn Processor
