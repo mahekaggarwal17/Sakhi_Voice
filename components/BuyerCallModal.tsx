@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { BuyerProfile } from "@/lib/data/seedBuyers";
-import { Phone, PhoneOff, Mic, MicOff, Volume2, ShieldCheck, Sparkles, Handshake, Bot, ArrowRight } from "lucide-react";
+import { Phone, PhoneOff, Mic, MicOff, Volume2, ShieldCheck, Sparkles, Handshake, Bot, ArrowRight, UserCheck } from "lucide-react";
 import { AudioWaveform } from "./AudioWaveform";
 
 interface BuyerCallModalProps {
@@ -23,10 +23,8 @@ export const BuyerCallModal: React.FC<BuyerCallModalProps> = ({
   lang,
 }) => {
   const [callDuration, setCallDuration] = useState(0);
-  const [isMuted, setIsMuted] = useState(false);
   const [negotiationStep, setNegotiationStep] = useState<number>(0);
   const [currentBuyerOffer, setCurrentBuyerOffer] = useState<number>(buyer.initialOfferPrice);
-  const [userCounterOffer, setUserCounterOffer] = useState<number>(220);
   const [isBuyerSpeaking, setIsBuyerSpeaking] = useState<boolean>(true);
   const [callTranscript, setCallTranscript] = useState<Array<{ sender: string; text: string; role: "buyer" | "user" | "ai" }>>([
     {
@@ -60,7 +58,6 @@ export const BuyerCallModal: React.FC<BuyerCallModalProps> = ({
     return `${mins.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  // Step 1: Entrepreneur sends Counter Offer (e.g. ₹220 or ₹205)
   const handleSendCounterOffer = (amount: number) => {
     setIsBuyerSpeaking(true);
     const newTurns = [
@@ -117,29 +114,29 @@ export const BuyerCallModal: React.FC<BuyerCallModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-[#FAF6F0] w-full max-w-2xl rounded-3xl border-2 border-orange-300 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-[#FAF6F0] w-full max-w-2xl rounded-3xl border-2 border-terracotta/40 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Call Header */}
-        <div className="bg-gradient-to-r from-orange-600 via-amber-600 to-orange-700 p-5 text-white flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white border border-white/30">
+        <div className="bg-gradient-to-r from-terracotta via-terracotta-dark to-[#78200A] p-5 text-white flex items-center justify-between shadow-md">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white border border-white/30 shadow-inner">
               <Phone className="w-6 h-6 animate-pulse" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs bg-emerald-500/90 text-white font-bold px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider animate-pulse">
+                <span className="text-xs bg-emerald-500 text-white font-extrabold px-2.5 py-0.5 rounded-full text-[10px] uppercase tracking-wider animate-pulse shadow-xs">
                   Agora RTC Live Call
                 </span>
-                <span className="text-xs text-orange-100 font-mono">{formatTime(callDuration)}</span>
+                <span className="text-xs text-orange-100 font-mono font-bold">{formatTime(callDuration)}</span>
               </div>
               <h3 className="font-bold text-lg leading-tight mt-0.5">{buyer.name}</h3>
-              <p className="text-xs text-orange-100/90">{buyer.organization}</p>
+              <p className="text-xs text-orange-100/90 font-medium">{buyer.organization}</p>
             </div>
           </div>
 
           <button
             onClick={onEndCall}
-            className="p-2.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold shadow-lg shadow-red-700/30 transition-all active:scale-95 flex items-center gap-1.5 text-xs"
+            className="p-2.5 rounded-2xl bg-rose-700 hover:bg-rose-800 text-white font-bold shadow-md shadow-rose-900/30 transition-all active:scale-95 flex items-center gap-1.5 text-xs cursor-pointer border border-rose-600"
           >
             <PhoneOff className="w-4 h-4" />
             <span>End Call</span>
@@ -147,9 +144,9 @@ export const BuyerCallModal: React.FC<BuyerCallModalProps> = ({
         </div>
 
         {/* Real-time Voice Audio Visualizer */}
-        <div className="bg-[#EFE7DB] px-6 py-3 border-b border-[#E3D6C2] flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-xs font-semibold text-[#5A4330]">
-            <Volume2 className="w-4 h-4 text-orange-600" />
+        <div className="bg-[#EFE5D6] px-6 py-2.5 border-b border-[#E0D1BC] flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-xs font-bold text-[#553C28]">
+            <Volume2 className="w-4 h-4 text-terracotta" />
             <span>{isBuyerSpeaking ? `${buyer.name} is speaking...` : "You are speaking (Agora WebRTC)"}</span>
           </div>
           <div className="w-48">
@@ -163,7 +160,7 @@ export const BuyerCallModal: React.FC<BuyerCallModalProps> = ({
         </div>
 
         {/* Live Conversation Transcript in Call */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-white/80">
+        <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-[#FFFDF9]/90">
           {callTranscript.map((turn, idx) => {
             const isBuyer = turn.role === "buyer";
             const isAI = turn.role === "ai";
@@ -172,14 +169,14 @@ export const BuyerCallModal: React.FC<BuyerCallModalProps> = ({
               return (
                 <div
                   key={idx}
-                  className="p-3 rounded-xl bg-orange-50/80 border border-orange-200 text-orange-950 text-xs flex items-start gap-2"
+                  className="p-3.5 rounded-2xl bg-orange-50 border border-orange-200/90 text-orange-950 text-xs flex items-start gap-2.5 shadow-xs"
                 >
-                  <Bot className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                  <Bot className="w-4 h-4 text-terracotta mt-0.5 flex-shrink-0" />
                   <div>
-                    <span className="font-bold block mb-0.5 text-orange-800">
-                      Sakhi AI Negotiation Assistant:
+                    <span className="font-extrabold block mb-0.5 text-terracotta">
+                      Sakhi AI Live Assist:
                     </span>
-                    <span>{turn.text}</span>
+                    <span className="font-semibold leading-relaxed">{turn.text}</span>
                   </div>
                 </div>
               );
@@ -190,14 +187,14 @@ export const BuyerCallModal: React.FC<BuyerCallModalProps> = ({
                 key={idx}
                 className={`flex flex-col ${isBuyer ? "items-start" : "items-end"}`}
               >
-                <span className="text-[10px] font-semibold text-[#7A6451] mb-1 px-1">
+                <span className="text-[10px] font-bold text-[#755D4A] mb-1 px-1">
                   {turn.sender}
                 </span>
                 <div
-                  className={`max-w-[85%] rounded-2xl p-3.5 text-xs sm:text-sm ${
+                  className={`max-w-[85%] rounded-2xl p-3.5 text-xs sm:text-sm leading-relaxed ${
                     isBuyer
-                      ? "bg-[#F3ECE1] text-[#291B10] border border-[#E4D5C2] rounded-tl-none font-medium"
-                      : "bg-orange-600 text-white rounded-tr-none font-medium shadow-sm"
+                      ? "bg-[#F4EDE2] text-[#281A0E] border border-[#E4D5C2] rounded-tl-none font-medium"
+                      : "bg-terracotta text-white rounded-tr-none font-medium shadow-xs"
                   }`}
                 >
                   {turn.text}
@@ -207,22 +204,22 @@ export const BuyerCallModal: React.FC<BuyerCallModalProps> = ({
           })}
         </div>
 
-        {/* Current Offer Status & Live Action Bar */}
-        <div className="bg-[#FAF5ED] p-5 border-t border-[#E8DCCB] space-y-4">
-          <div className="flex items-center justify-between bg-white p-3.5 rounded-2xl border border-[#E6DAC7]">
+        {/* Negotiation Action Bar */}
+        <div className="bg-[#FAF4EB] p-5 border-t border-[#E8DCCB] space-y-4">
+          <div className="flex items-center justify-between bg-white p-3.5 rounded-2xl border border-[#E6DAC7] shadow-xs">
             <div>
-              <span className="text-[11px] text-[#7A624F] font-semibold block">
+              <span className="text-[11px] text-[#7A604C] font-semibold block">
                 Current Buyer Offer
               </span>
-              <span className="text-xl font-extrabold text-emerald-800">
-                ₹{currentBuyerOffer} <span className="text-xs font-normal text-emerald-700">/ basket</span>
+              <span className="text-xl font-extrabold text-emerald-900">
+                ₹{currentBuyerOffer} <span className="text-xs font-semibold text-emerald-700">/ basket</span>
               </span>
             </div>
             <div className="text-right">
-              <span className="text-[11px] text-[#7A624F] font-semibold block">
+              <span className="text-[11px] text-[#7A604C] font-semibold block">
                 Total Deal Value ({quantity} units)
               </span>
-              <span className="text-base font-extrabold text-orange-900">
+              <span className="text-base font-extrabold text-terracotta">
                 ₹{(currentBuyerOffer * quantity).toLocaleString("en-IN")}
               </span>
             </div>
@@ -233,13 +230,13 @@ export const BuyerCallModal: React.FC<BuyerCallModalProps> = ({
             <div className="flex flex-wrap gap-2 justify-end">
               <button
                 onClick={() => handleSendCounterOffer(220)}
-                className="px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95"
+                className="px-4 py-2.5 bg-terracotta hover:bg-terracotta-dark text-white text-xs font-bold rounded-xl shadow-tactile transition-all btn-craft cursor-pointer"
               >
                 🗣️ Say: "₹220 se kam nahi denge"
               </button>
               <button
                 onClick={() => handleSendCounterOffer(205)}
-                className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95"
+                className="px-4 py-2.5 bg-marigold hover:bg-marigold-600 text-white text-xs font-bold rounded-xl shadow-tactile transition-all btn-craft cursor-pointer"
               >
                 🗣️ Say: "₹205 final offer hai"
               </button>
@@ -250,7 +247,7 @@ export const BuyerCallModal: React.FC<BuyerCallModalProps> = ({
             <div className="flex flex-wrap gap-2 justify-end">
               <button
                 onClick={() => handleSendCounterOffer(205)}
-                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1.5"
+                className="px-5 py-3 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-tactile transition-all flex items-center gap-2 btn-craft cursor-pointer"
               >
                 <Handshake className="w-4 h-4" />
                 <span>Agree to ₹205 and Finalize</span>
@@ -260,16 +257,16 @@ export const BuyerCallModal: React.FC<BuyerCallModalProps> = ({
 
           {negotiationStep === 2 && (
             <div className="flex items-center justify-between gap-3">
-              <span className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <span className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-700" />
                 Mutual Price Agreed: ₹{currentBuyerOffer}/unit
               </span>
               <button
                 onClick={() => onAgreePrice(currentBuyerOffer)}
-                className="px-5 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-700/25 flex items-center gap-1.5 active:scale-95 transition-all"
+                className="px-5 py-3 bg-gradient-to-r from-emerald-700 to-teal-700 hover:from-emerald-800 hover:to-teal-800 text-white text-xs font-bold rounded-xl shadow-tactile flex items-center gap-2 btn-craft cursor-pointer"
               >
                 <Handshake className="w-4 h-4" />
-                <span>Confirm Deal & Record</span>
+                <span>Confirm Deal & Proceed</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>

@@ -316,16 +316,16 @@ export default function SakhiVoiceApp() {
         handleProcessTurn("Mere paas 100 handmade baskets hain aur mujhe bechna hai.");
         break;
       case 2:
-        handleProcessTurn("Ruko, quantity actually 120 hai.", true);
+        handleProcessTurn("Bulk mein. Greater Noida.");
         break;
       case 3:
-        handleProcessTurn("Market mein iska kya rate chal raha hai?");
+        handleProcessTurn("Haan, market rate check karo.");
         break;
       case 4:
-        handleProcessTurn("Buyer dhoondo.");
+        handleProcessTurn("Actually mere paas 150 baskets hain.", true);
         break;
       case 5:
-        handleProcessTurn("Is buyer se baat karwao.");
+        handleProcessTurn("Haan, buyer se baat karwao.");
         break;
       case 6:
         setActiveBuyerCall(SEED_BUYERS[0]);
@@ -335,13 +335,13 @@ export default function SakhiVoiceApp() {
           buyerName: "Rajesh Sharma",
           organization: "ABC Handicrafts",
           product: "Handmade Baskets",
-          quantity: 120,
+          quantity: businessMemory.quantity || 150,
           agreedPrice: 205,
         });
         setShowDealConfirmModal(true);
         break;
       case 8:
-        handleProcessTurn("Mujhe production badhane ke liye financial support aur loan chahiye.");
+        handleProcessTurn("Mujhe business ke liye loan chahiye.");
         break;
       case 9:
         handleProcessTurn("Counselor se connect karo.");
@@ -423,33 +423,33 @@ export default function SakhiVoiceApp() {
       {/* Main Container */}
       <main className="max-w-7xl mx-auto w-full p-4 lg:p-8 flex-1 flex flex-col gap-6">
         {/* Top Hero: Voice-First Philosophy Banner */}
-        <div className="bg-gradient-to-r from-orange-950 via-[#3A2213] to-orange-950 text-white rounded-3xl p-5 lg:p-6 shadow-xl shadow-orange-950/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-orange-900/40">
-          <div className="space-y-1">
+        <div className="bg-gradient-to-r from-[#2B1B10] via-[#3E2414] to-[#24150C] text-white rounded-3xl p-5 lg:p-6 shadow-xl shadow-[#2B1B10]/15 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-[#52331E]">
+          <div className="space-y-1.5">
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-amber-300 bg-amber-500/20 px-2.5 py-0.5 rounded-full border border-amber-400/30">
+              <span className="text-[11px] font-extrabold uppercase tracking-widest text-amber-300 bg-amber-500/20 px-3 py-0.5 rounded-full border border-amber-400/30 shadow-xs">
                 Agora Conversational AI Core
               </span>
-              <span className="text-xs text-orange-200">
-                AI for Agriculture & Rural Communities
+              <span className="text-xs text-orange-200 font-semibold">
+                AI for Rural Women Entrepreneurs & Artisans
               </span>
             </div>
-            <h2 className="text-lg lg:text-2xl font-bold tracking-tight text-white">
+            <h2 className="text-lg lg:text-2xl font-black tracking-tight text-white">
               "Don't make rural women learn complicated apps. Let them simply talk."
             </h2>
-            <p className="text-xs lg:text-sm text-orange-200/90 max-w-2xl font-normal">
+            <p className="text-xs lg:text-sm text-orange-100/90 max-w-2xl font-normal leading-relaxed">
               {lang === "hi"
-                ? "प्राकृतिक भाषा (हिंग्लिश), बिना टाइप किए मार्केट दर, खरीदार खोज, लाइव मोलभाव और एनजीओ सहायता।"
+                ? "प्राकृतिक भाषा (हिंग्लिश), बिना टाइप किए मंडी दर, थोक खरीदार खोज, लाइव मोलभाव और एनजीओ सहायता।"
                 : "Zero-typing voice workflows for product intake, market pricing, live negotiation & NGO escalation."}
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={() => setShowDemoGuide(true)}
-              className="px-4 py-2.5 bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs rounded-2xl shadow-md transition-all active:scale-95 flex items-center gap-2"
+              className="px-5 py-3 bg-gradient-to-r from-terracotta to-marigold hover:from-terracotta-dark hover:to-[#A83814] text-white font-bold text-xs rounded-2xl shadow-tactile transition-all btn-craft cursor-pointer flex items-center gap-2"
             >
-              <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>Judge 9-Step Demo</span>
+              <Sparkles className="w-4 h-4 text-amber-200" />
+              <span>Judge 9-Step Demo Guide</span>
             </button>
           </div>
         </div>

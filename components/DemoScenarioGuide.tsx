@@ -85,20 +85,20 @@ export const DemoScenarioGuide: React.FC<DemoScenarioGuideProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-end animate-fade-in">
-      <div className="bg-[#FAF7F2] w-full max-w-lg h-full shadow-2xl border-l-2 border-[#E7D9C4] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm flex justify-end animate-fade-in">
+      <div className="bg-[#FAF6F0] w-full max-w-lg h-full shadow-2xl border-l-2 border-[#E7D8C4] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-orange-600 to-amber-600 p-5 text-white flex items-center justify-between">
+        <div className="bg-gradient-to-r from-terracotta via-marigold to-terracotta-dark p-5 text-white flex items-center justify-between shadow-md">
           <div className="flex items-center gap-2.5">
             <Sparkles className="w-5 h-5 text-amber-200" />
             <div>
               <h3 className="font-bold text-base">9-Step Winning Hackathon Demo Script</h3>
-              <p className="text-xs text-orange-100">Click any step to simulate the live journey</p>
+              <p className="text-xs text-orange-100/90 font-medium">Click any step to trigger the live flow</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-white/80 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+            className="p-1.5 text-white/80 hover:text-white rounded-full hover:bg-white/10 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -114,17 +114,17 @@ export const DemoScenarioGuide: React.FC<DemoScenarioGuideProps> = ({
                 key={s.step}
                 className={`p-4 rounded-2xl border transition-all ${
                   isCurrent
-                    ? "bg-white border-orange-400 ring-2 ring-orange-300 shadow-md"
-                    : "bg-[#FBF8F3] border-[#E8DCCB] hover:border-orange-200"
+                    ? "bg-[#FFFDF9] border-terracotta ring-2 ring-terracotta/30 shadow-md"
+                    : "bg-[#FAF4EB] border-[#E8DCCB] hover:border-terracotta/30"
                 }`}
               >
                 <div className="flex items-start justify-between gap-2 mb-1">
-                  <span className="text-[10px] font-extrabold uppercase bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full border border-orange-200">
+                  <span className="text-[10px] font-extrabold uppercase bg-orange-100/90 text-terracotta px-2.5 py-0.5 rounded-full border border-orange-200 shadow-xs">
                     {s.tag}
                   </span>
                   <button
                     onClick={() => onRunStep(s.step)}
-                    className="flex items-center gap-1 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 px-3 py-1 rounded-xl shadow-xs transition-all active:scale-95"
+                    className="flex items-center gap-1 text-xs font-bold text-white bg-terracotta hover:bg-terracotta-dark px-3.5 py-1.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
                   >
                     <Play className="w-3 h-3 fill-current" />
                     <span>Run</span>
@@ -132,10 +132,10 @@ export const DemoScenarioGuide: React.FC<DemoScenarioGuideProps> = ({
                 </div>
 
                 <h4 className="font-bold text-sm text-[#27180C] mt-1">{s.title}</h4>
-                <p className="text-xs font-semibold text-orange-900 italic my-1">
+                <p className="text-xs font-bold text-terracotta italic my-1">
                   "{s.voiceUtterance}"
                 </p>
-                <p className="text-[11px] text-[#715945] leading-relaxed">{s.description}</p>
+                <p className="text-[11px] text-[#715945] font-medium leading-relaxed">{s.description}</p>
               </div>
             );
           })}
@@ -143,13 +143,13 @@ export const DemoScenarioGuide: React.FC<DemoScenarioGuideProps> = ({
 
         {/* Footer */}
         <div className="p-4 bg-[#F2E8DC] border-t border-[#E1D1BD] flex items-center justify-between text-xs text-[#5E4734]">
-          <span className="font-medium flex items-center gap-1">
-            <Radio className="w-3.5 h-3.5 text-orange-600 animate-pulse" />
+          <span className="font-bold flex items-center gap-1.5">
+            <Radio className="w-3.5 h-3.5 text-terracotta animate-pulse" />
             Agora Conversational AI Core
           </span>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-orange-600 text-white font-bold rounded-xl shadow-sm hover:bg-orange-700 transition-all"
+            className="px-4 py-2 bg-terracotta hover:bg-terracotta-dark text-white font-bold rounded-xl shadow-sm transition-all cursor-pointer"
           >
             Close Guide
           </button>
