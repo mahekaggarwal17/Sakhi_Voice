@@ -4,15 +4,13 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm install --no-audit --prefer-offline && npm run build
+    buildCommand: npm install && npm run build
     startCommand: npm run start
     envVars:
       - key: NODE_VERSION
         value: 20.18.0
       - key: NEXT_TELEMETRY_DISABLED
         value: "1"
-      - key: NODE_ENV
-        value: production
       - key: NEXT_PUBLIC_AGORA_APP_ID
         value: b6bfc5ea3dac445cb951beb9d373ddc5
       - key: AGORA_APP_ID
