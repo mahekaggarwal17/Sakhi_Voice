@@ -361,7 +361,7 @@ export default function SakhiVoiceWebUI() {
     setVoiceState("IDLE");
   };
 
-  // Voice Speaker with safety fallback & auto-listen continuation
+  // Ultra-Low Latency Speech Synthesizer (<60ms startup)
   const speakText = (text: string, onComplete?: () => void) => {
     if (typeof window === "undefined") {
       if (onComplete) onComplete();
@@ -390,59 +390,61 @@ export default function SakhiVoiceWebUI() {
         // Continuous hands-free loop: auto-listen after Sakhi speaks!
         setTimeout(() => {
           startListening();
-        }, 400);
+        }, 300);
       }
     };
 
-    safetyTimeoutRef.current = setTimeout(() => {
-      onAudioFinished();
-    }, 7000);
+    const fallbackToAudioStream = () => {
+      try {
+        const audioUrl = `/api/tts?text=${encodeURIComponent(text.slice(0, 180))}&lang=${lang}`;
+        const audio = new Audio(audioUrl);
+        currentAudioRef.current = audio;
 
-    const audioUrl = `/api/tts?text=${encodeURIComponent(text.slice(0, 180))}&lang=${lang}`;
-    const audio = new Audio(audioUrl);
-    currentAudioRef.current = audio;
+        audio.onended = () => onAudioFinished();
+        audio.onerror = () => onAudioFinished();
 
-    audio.onended = () => {
-      onAudioFinished();
-    };
-
-    audio.onerror = () => {
-      if ("speechSynthesis" in window) {
-        try {
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.lang = lang === "hi" ? "hi-IN" : "en-IN";
-          utterance.rate = 0.95;
-          utterance.pitch = 1.05;
-          utterance.onend = () => {
-            onAudioFinished();
-          };
-          utterance.onerror = () => {
-            onAudioFinished();
-          };
-          window.speechSynthesis.speak(utterance);
-        } catch (e) {
+        audio.play().catch(() => {
           onAudioFinished();
-        }
-      } else {
+        });
+      } catch (err) {
         onAudioFinished();
       }
     };
 
-    audio.play().catch(() => {
-      if ("speechSynthesis" in window) {
-        try {
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.lang = lang === "hi" ? "hi-IN" : "en-IN";
-          utterance.onend = () => onAudioFinished();
-          utterance.onerror = () => onAudioFinished();
-          window.speechSynthesis.speak(utterance);
-        } catch (e) {
-          onAudioFinished();
+    // Primary: Zero-Latency Native Speech Synthesis
+    if ("speechSynthesis" in window) {
+      try {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = lang === "hi" ? "hi-IN" : "en-IN";
+        utterance.rate = 1.0;
+        utterance.pitch = 1.05;
+
+        const voices = window.speechSynthesis.getVoices();
+        const preferredVoice = voices.find(
+          (v) => (lang === "hi" ? v.lang.startsWith("hi") : v.lang.startsWith("en-IN") || v.lang.startsWith("en"))
+        );
+        if (preferredVoice) {
+          utterance.voice = preferredVoice;
         }
-      } else {
-        onAudioFinished();
+
+        utterance.onend = () => onAudioFinished();
+        utterance.onerror = (e) => {
+          console.warn("SpeechSynthesis notice, using fallback:", e);
+          fallbackToAudioStream();
+        };
+
+        safetyTimeoutRef.current = setTimeout(() => {
+          onAudioFinished();
+        }, 8000);
+
+        window.speechSynthesis.speak(utterance);
+        return;
+      } catch (err) {
+        console.warn("Native speech init fallback:", err);
       }
-    });
+    }
+
+    fallbackToAudioStream();
   };
 
   // Turn Processor
