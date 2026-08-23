@@ -88,6 +88,39 @@ export function processUserVoiceInput(
   }
 
   // =========================================================================
+  // 1.5 CONVERSATIONAL GREETINGS ("Hello", "Namaste", "हेलो", "नमस्ते", "Hi")
+  // =========================================================================
+  const isGreetingOnly =
+    lower === "hello" ||
+    lower === "namaste" ||
+    lower === "hi" ||
+    lower === "hey" ||
+    lower.includes("hello") && input.length < 10 ||
+    lower.includes("namaste") && input.length < 12 ||
+    input === "हेलो" ||
+    input === "नमस्ते" ||
+    input === "हैलो" ||
+    input === "हाय" ||
+    input === "नमस्कार" ||
+    lower === "kaise ho" ||
+    input === "कैसी हो";
+
+  if (isGreetingOnly) {
+    if (!nextState.product) {
+      responseHindi = `Namaste Didi! Main aapki Sakhi hoon. Aap aaj kya bechna ya jaanna chahti hain? Jaise baskets, shahad, mandi rate ya loan scheme.`;
+      responseDevanagari = `नमस्ते दीदी! मैं आपकी सखी हूँ। आप आज क्या बेचना या जानना चाहती हैं? जैसे टोकरियां, शहद, मंडी भाव या लोन योजना।`;
+      responseEnglish = `Namaste Didi! I am your Sakhi. What would you like to sell or explore today?`;
+      nextState.lastQuestionAsked = "GREETING";
+      return formatResponse(responseHindi, responseDevanagari, responseEnglish, nextState, null, "GREETING");
+    } else {
+      responseHindi = `Namaste Didi! Hum ${nextState.quantity ? nextState.quantity + ' ' : ''}${nextState.product} ki baat kar rahe the. Bataiye, aage kya karna hai?`;
+      responseDevanagari = `नमस्ते दीदी! हम ${nextState.quantity ? nextState.quantity + ' ' : ''}${nextState.product} की बात कर रहे थे। बताइए, आगे क्या करना है?`;
+      responseEnglish = `Namaste Didi! We were discussing ${nextState.quantity ? nextState.quantity + ' ' : ''}${nextState.product}. How can I assist next?`;
+      return formatResponse(responseHindi, responseDevanagari, responseEnglish, nextState, null, nextState.conversationPhase);
+    }
+  }
+
+  // =========================================================================
   // 2. PRODUCT & ATTRIBUTE EXTRACTION (Slot Filling across turns)
   // =========================================================================
   // Product extraction

@@ -374,8 +374,7 @@ export default function SakhiVoiceWebUI() {
           recognition.onerror = (err: any) => {
             console.warn("Speech recognition notice:", err);
             setVoiceState("IDLE");
-            // If mic permission blocked, fallback to simulated voice turn
-            handleProcessTurn("मेरे पास 100 हस्तनिर्मित टोकरियाँ हैं और मुझे सही दाम पर बेचना है।");
+            setCurrentSpeechText("माइक दबाकर बोलें...");
           };
 
           recognition.onend = () => {
@@ -391,12 +390,8 @@ export default function SakhiVoiceWebUI() {
       }
     }
 
-    // Default simulation fallback
-    setVoiceState("LISTENING");
-    setCurrentSpeechText("सखी सुन रही है...");
-    setTimeout(() => {
-      handleProcessTurn("मेरे पास 100 हस्तनिर्मित टोकरियाँ हैं और मुझे सही दाम पर बेचना है।");
-    }, 1200);
+    setVoiceState("IDLE");
+    setCurrentSpeechText("कृपया माइक दबाकर बोलें...");
   };
 
   return (
@@ -507,7 +502,6 @@ export default function SakhiVoiceWebUI() {
                 <button
                   onClick={() => {
                     setCurrentScreen("VOICE_SCREEN");
-                    handleProcessTurn("नमस्ते सखी, मुझे अपने उत्पाद का सही दाम जानना है।");
                   }}
                   className="btn-rural-primary flex items-center gap-3 text-lg cursor-pointer"
                 >
@@ -562,7 +556,6 @@ export default function SakhiVoiceWebUI() {
                 <button
                   onClick={() => {
                     setCurrentScreen("VOICE_SCREEN");
-                    handleProcessTurn("मेरे पास 100 हस्तनिर्मित टोकरियाँ हैं।");
                   }}
                   className="w-24 h-24 rounded-full bg-gradient-to-tr from-[#E85D3A] via-[#F4C430] to-[#E85D3A] text-white flex flex-col items-center justify-center animate-mic-pulse cursor-pointer transition-transform hover:scale-110 shadow-lg"
                 >
@@ -785,7 +778,6 @@ export default function SakhiVoiceWebUI() {
             <button
               onClick={() => {
                 setCurrentScreen("VOICE_SCREEN");
-                handleProcessTurn("नमस्ते सखी!");
               }}
               className="px-8 py-4 bg-white hover:bg-teal-50 text-[#2B7A78] font-extrabold text-base rounded-full shadow-lg transition-transform hover:scale-105 cursor-pointer whitespace-nowrap"
             >
