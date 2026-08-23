@@ -1,155 +1,102 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+Devanagari:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --primary-dark: #000000;
-  --surface-dark: #09090b;
-  --zinc-dark: #18181B;
-  --bg-light: #F4F4F5;
-  --emerald-highlight: #34D399;
-  --emerald-glow: rgba(52, 211, 153, 0.4);
-  --font-inter: 'Inter', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, sans-serif;
+  --bg-cream: #FFF8F0;
+  --primary-terracotta: #E85D3A;
+  --secondary-teal: #2B7A78;
+  --accent-saffron: #F4C430;
+  --text-dark: #2D1F1B;
+  --text-muted: #8C7B70;
+  --font-family: 'Plus Jakarta Sans', 'Noto Sans Devanagari', sans-serif;
 }
 
 body {
-  color: #18181B;
-  background-color: var(--bg-light);
-  font-family: var(--font-inter);
+  background-color: var(--bg-cream);
+  color: var(--text-dark);
+  font-family: var(--font-family);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
 }
 
-/* Glassmorphism Classes */
-.glass-container {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+/* Friendly Rural-Modern Card */
+.rural-card {
+  background: #FFFFFF;
+  border: 1.5px solid #F2E4D4;
+  border-radius: 28px;
+  box-shadow: 0 4px 20px -2px rgba(45, 31, 27, 0.06), 0 1px 3px rgba(45, 31, 27, 0.04);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.glass-container-strong {
-  background: rgba(24, 24, 27, 0.75);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+.rural-card:hover {
+  transform: translateY(-3px);
+  border-color: #E85D3A;
+  box-shadow: 0 12px 30px -4px rgba(232, 93, 58, 0.12), 0 4px 10px rgba(45, 31, 27, 0.04);
 }
 
-.glass-container-light {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(228, 228, 231, 0.8);
-}
-
-.glass-stat-card {
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.glass-stat-card:hover {
-  background: rgba(255, 255, 255, 0.09);
-  border-color: rgba(52, 211, 153, 0.4);
-  transform: translateY(-2px);
-}
-
-/* Grain Overlay Texture for Dark Sections */
-.grain-overlay {
-  position: relative;
-}
-.grain-overlay::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
-  pointer-events: none;
-  border-radius: inherit;
-  z-index: 1;
-}
-
-/* Interactive Action Pill Button */
-.btn-pill-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0.5rem 0.5rem 1.5rem;
-  border-radius: 9999px;
-  background-color: #FFFFFF;
-  color: #18181B;
-  font-weight: 600;
-  font-size: 0.875rem;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
-}
-.btn-pill-action:hover {
-  transform: scale(1.05);
-}
-.btn-pill-action .icon-container {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 9999px;
-  background-color: #18181B;
-  color: #FFFFFF;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.3s ease;
-}
-.btn-pill-action:hover .icon-container {
-  background-color: #27272A;
-}
-
-/* Section standard radius */
-.section-rounded {
-  border-radius: 2.5rem; /* 40px */
-}
-
-/* Animations */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in-up {
-  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-@keyframes pulseGlow {
+/* Gentle Mic Pulse */
+@keyframes mic-gentle-pulse {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.4), 0 0 30px rgba(52, 211, 153, 0.2);
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(232, 93, 58, 0.35), 0 8px 24px rgba(232, 93, 58, 0.25);
   }
   50% {
-    box-shadow: 0 0 0 16px rgba(52, 211, 153, 0.1), 0 0 50px rgba(52, 211, 153, 0.35);
+    transform: scale(1.05);
+    box-shadow: 0 0 0 18px rgba(244, 196, 48, 0.2), 0 12px 32px rgba(232, 93, 58, 0.35);
   }
 }
 
-.animate-emerald-glow {
-  animation: pulseGlow 3s ease-in-out infinite;
+.animate-mic-pulse {
+  animation: mic-gentle-pulse 3.2s ease-in-out infinite;
+}
+
+/* Tactile Big Button */
+.btn-rural-primary {
+  background-color: #E85D3A;
+  color: #FFFFFF;
+  font-weight: 700;
+  border-radius: 9999px;
+  padding: 16px 32px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 6px 0 0 #B84324, 0 10px 24px -2px rgba(232, 93, 58, 0.35);
+}
+
+.btn-rural-primary:hover {
+  transform: translateY(-2px);
+  background-color: #EE6A47;
+  box-shadow: 0 8px 0 0 #B84324, 0 14px 28px -2px rgba(232, 93, 58, 0.4);
+}
+
+.btn-rural-primary:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 0 #B84324, 0 4px 10px rgba(232, 93, 58, 0.2);
+}
+
+/* Waveform Bar Animation */
+@keyframes wave-bounce {
+  0%, 100% { height: 8px; }
+  50% { height: 32px; }
+}
+
+.animate-wave-bar {
+  animation: wave-bounce 1.2s ease-in-out infinite alternate;
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #18181B;
+  background: #FFF8F0;
 }
 ::-webkit-scrollbar-thumb {
-  background: #3F3F46;
+  background: #E5D5C5;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #34D399;
+  background: #E85D3A;
 }

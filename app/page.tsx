@@ -1,49 +1,77 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Header } from "@/components/Header";
-import { VoiceController, AgentVoiceState } from "@/components/VoiceController";
-import { BusinessSnapshot } from "@/components/BusinessSnapshot";
-import { ConversationTranscript, TranscriptTurn } from "@/components/ConversationTranscript";
-import { ToolExecutionBadge } from "@/components/ToolExecutionBadge";
-import { MarketIntelligenceCard } from "@/components/MarketIntelligenceCard";
-import { BuyerDiscoveryList } from "@/components/BuyerDiscoveryList";
+import {
+  Mic,
+  Volume2,
+  Phone,
+  ShieldCheck,
+  Sparkles,
+  ArrowRight,
+  TrendingUp,
+  HeartHandshake,
+  Landmark,
+  Sprout,
+  Sun,
+  GraduationCap,
+  Heart,
+  ChevronRight,
+  CheckCircle2,
+  RefreshCw,
+  Star,
+  Quote,
+  Lock,
+  Radio,
+  Square,
+  Loader2,
+  PhoneCall
+} from "lucide-react";
 import { BuyerCallModal } from "@/components/BuyerCallModal";
 import { DealConfirmModal } from "@/components/DealConfirmModal";
-import { NgoSupportCard } from "@/components/NgoSupportCard";
 import { CaseEscalationModal } from "@/components/CaseEscalationModal";
 import { DemoScenarioGuide } from "@/components/DemoScenarioGuide";
-import { ImpactDashboard } from "@/components/ImpactDashboard";
 import { INITIAL_BUSINESS_MEMORY, BusinessMemoryState } from "@/lib/agent/conversationState";
 import { ToolExecutionResult, RECORDED_DEALS, RECORDED_CASES } from "@/lib/agent/tools";
 import { BuyerProfile, SEED_BUYERS } from "@/lib/data/seedBuyers";
-import { SupportOrganization, SupportCaseRecord, SEED_SUPPORT_ORGS } from "@/lib/data/seedSupport";
+import { SupportCaseRecord, SEED_SUPPORT_ORGS } from "@/lib/data/seedSupport";
 import { AgoraVoiceManager } from "@/lib/agora/rtcClient";
-import { Sparkles, TrendingUp, Handshake, HeartHandshake, ShieldCheck, LayoutDashboard, MessageSquare, ArrowRight, Mic, Radio, Lock } from "lucide-react";
 
-export default function SakhiVoiceApp() {
-  // State: Language & Agora Engine
+export default function SakhiVoiceWebUI() {
+  // Screen View Switcher: "LANDING" | "VOICE_SCREEN"
+  const [currentScreen, setCurrentScreen] = useState<"LANDING" | "VOICE_SCREEN">("LANDING");
+
+  // Language: "hi" | "en"
   const [lang, setLang] = useState<"hi" | "en">("hi");
-  const [agoraConnected, setAgoraConnected] = useState<boolean>(true);
-  const [voiceState, setVoiceState] = useState<AgentVoiceState>("IDLE");
-  const [volumeLevel, setVolumeLevel] = useState<number>(0);
-  const [currentSpeechText, setCurrentSpeechText] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"WORKSPACE" | "DASHBOARD">("WORKSPACE");
 
-  // Business State & Transcript
+  // Voice Interaction Engine States
+  const [voiceState, setVoiceState] = useState<"IDLE" | "LISTENING" | "THINKING" | "SPEAKING">("IDLE");
+  const [currentSpeechText, setCurrentSpeechText] = useState<string>("");
   const [businessMemory, setBusinessMemory] = useState<BusinessMemoryState>(INITIAL_BUSINESS_MEMORY);
-  const [transcript, setTranscript] = useState<TranscriptTurn[]>([
+
+  // Chat-Style Response Transcript
+  const [messages, setMessages] = useState<Array<{
+    id: string;
+    sender: "AI" | "USER";
+    textHindi: string;
+    textEnglish: string;
+    timestamp: string;
+    suggestedChips?: string[];
+  }>>([
     {
-      id: "intro-01",
+      id: "msg-1",
       sender: "AI",
-      textHindi: "Namaste! Main aapki business agent Sakhi hoon. Aap kya bechna chahti hain?",
-      textEnglish: "Namaste! I am your business agent Sakhi. What product would you like to sell?",
-      timestamp: "10:00 AM",
+      textHindi: "नमस्ते दीदी! मैं आपकी सखी हूँ। आप आज क्या बेचना या जानना चाहती हैं?",
+      textEnglish: "Namaste Didi! I am your Sakhi. What would you like to sell or explore today?",
+      timestamp: "अभी (Just now)",
+      suggestedChips: [
+        "मेरे पास 100 टोकरियां हैं (Sell 100 Baskets)",
+        "आज का मंडी भाव क्या है? (Check Mandi Rates)",
+        "मुद्रा लोन की जानकारी चाहिए (Loan Schemes)"
+      ],
     },
   ]);
 
-  // Active Tool & Modals
-  const [lastExecutedTool, setLastExecutedTool] = useState<ToolExecutionResult | null>(null);
+  // Agora & Modals
   const [activeBuyerCall, setActiveBuyerCall] = useState<BuyerProfile | null>(null);
   const [showDealConfirmModal, setShowDealConfirmModal] = useState<boolean>(false);
   const [pendingDealData, setPendingDealData] = useState<{ buyerName: string; organization: string; product: string; quantity: number; agreedPrice: number } | null>(null);
@@ -51,33 +79,22 @@ export default function SakhiVoiceApp() {
   const [showDemoGuide, setShowDemoGuide] = useState<boolean>(false);
   const [currentDemoStep, setCurrentDemoStep] = useState<number>(0);
 
-  // Agora Voice Manager Ref
   const agoraManagerRef = useRef<AgoraVoiceManager | null>(null);
-  const recognitionRef = useRef<any>(null);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Initialize Agora Voice Manager & Speech Engine
+  // Initialize Agora Voice Manager
   useEffect(() => {
     agoraManagerRef.current = new AgoraVoiceManager();
-    agoraManagerRef.current.onStateChange((state) => {
-      setAgoraConnected(state.isConnected);
-      if (state.audioVolume > 0) {
-        setVolumeLevel(state.audioVolume);
-      }
-    });
-
     agoraManagerRef.current.joinChannel("sakhi-main-channel").catch((e) => {
-      console.log("Agora auto-channel joined in demo mode:", e);
+      console.log("Agora auto-channel joined:", e);
     });
-
     return () => {
       agoraManagerRef.current?.leaveChannel();
     };
   }, []);
 
-  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
-
-  // High-Quality Natural Hindi Voice Speaker
-  const speakText = (textHindiDevanagari: string, textFallback: string, onComplete?: () => void) => {
+  // Voice Speaker
+  const speakText = (text: string, onComplete?: () => void) => {
     if (typeof window === "undefined") {
       if (onComplete) onComplete();
       return;
@@ -85,7 +102,6 @@ export default function SakhiVoiceApp() {
 
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
-      currentAudioRef.current.currentTime = 0;
       currentAudioRef.current = null;
     }
     if ("speechSynthesis" in window) {
@@ -94,14 +110,9 @@ export default function SakhiVoiceApp() {
 
     setVoiceState("SPEAKING");
 
-    const textToStream = textHindiDevanagari || textFallback;
-    const audioUrl = `/api/tts?text=${encodeURIComponent(textToStream)}&lang=${lang === "hi" ? "hi" : "en"}`;
+    const audioUrl = `/api/tts?text=${encodeURIComponent(text)}&lang=${lang}`;
     const audio = new Audio(audioUrl);
     currentAudioRef.current = audio;
-
-    audio.onplay = () => {
-      setVoiceState("SPEAKING");
-    };
 
     audio.onended = () => {
       setVoiceState("IDLE");
@@ -109,52 +120,22 @@ export default function SakhiVoiceApp() {
       if (onComplete) onComplete();
     };
 
-    audio.onerror = (e) => {
-      console.warn("Audio stream fallback to Web Speech Synthesis:", e);
+    audio.onerror = () => {
       if ("speechSynthesis" in window) {
-        const utterance = new SpeechSynthesisUtterance(textHindiDevanagari || textFallback);
+        const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = 0.95;
-        utterance.pitch = 1.05;
-
-        const voices = window.speechSynthesis.getVoices();
-        const hindiVoice = voices.find(
-          (v) =>
-            v.lang.includes("hi") ||
-            v.name.includes("Hindi") ||
-            v.name.includes("Swara") ||
-            v.name.includes("Madhur") ||
-            v.name.includes("Neerja")
-        );
-        if (hindiVoice) {
-          utterance.voice = hindiVoice;
-        }
-
         utterance.onend = () => {
           setVoiceState("IDLE");
           if (onComplete) onComplete();
         };
-        utterance.onerror = () => {
-          setVoiceState("IDLE");
-          if (onComplete) onComplete();
-        };
-
         window.speechSynthesis.speak(utterance);
       } else {
         setVoiceState("IDLE");
-        if (onComplete) onComplete();
       }
     };
 
-    audio.play().catch((err) => {
-      console.warn("Autoplay audio error fallback:", err);
-      if ("speechSynthesis" in window) {
-        const utterance = new SpeechSynthesisUtterance(textHindiDevanagari || textFallback);
-        utterance.onend = () => setVoiceState("IDLE");
-        utterance.onerror = () => setVoiceState("IDLE");
-        window.speechSynthesis.speak(utterance);
-      } else {
-        setVoiceState("IDLE");
-      }
+    audio.play().catch(() => {
+      setVoiceState("IDLE");
     });
   };
 
@@ -173,22 +154,26 @@ export default function SakhiVoiceApp() {
     }
 
     const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    const userTurnId = `user-${Date.now()}`;
+    const userMsgId = `user-${Date.now()}`;
 
-    setTranscript((prev) => [
+    setMessages((prev) => [
       ...prev,
       {
-        id: userTurnId,
+        id: userMsgId,
         sender: "USER",
         textHindi: userUtterance,
         textEnglish: userUtterance,
         timestamp,
-        isInterruption,
       },
     ]);
 
     setVoiceState("THINKING");
     setCurrentSpeechText(userUtterance);
+
+    // Switch to voice screen if on landing
+    if (currentScreen === "LANDING") {
+      setCurrentScreen("VOICE_SCREEN");
+    }
 
     try {
       const res = await fetch("/api/agent", {
@@ -202,14 +187,12 @@ export default function SakhiVoiceApp() {
         }),
       });
 
-      if (!res.ok) throw new Error("Agent processing error");
-
+      if (!res.ok) throw new Error("Agent error");
       const data = await res.json();
 
       setBusinessMemory(data.updatedMemory);
 
       if (data.toolExecution) {
-        setLastExecutedTool(data.toolExecution);
         if (data.toolExecution.toolName === "createDeal" && data.toolExecution.data?.dealRecord) {
           RECORDED_DEALS.push(data.toolExecution.data.dealRecord);
         }
@@ -219,392 +202,692 @@ export default function SakhiVoiceApp() {
         }
       }
 
-      const aiTurnId = `ai-${Date.now()}`;
-      setTranscript((prev) => [
+      let dynamicChips = [
+        "हाँ, मंडी भाव चेक करो",
+        "खरीदार से बात करवाओ",
+        "₹50,000 लोन योजना बताओ"
+      ];
+
+      if (data.updatedMemory.conversationPhase === "MARKET_CHECK") {
+        dynamicChips = ["खरीदार दिखाओ", "रेट ₹220 से शुरू करो", "और जानकारी चाहिए"];
+      } else if (data.updatedMemory.conversationPhase === "BUYER_DISCOVERY") {
+        dynamicChips = ["राजेश शर्मा को कॉल लगाओ", "दूसरे खरीदार दिखाओ", "मंडी भाव फिर से बताओ"];
+      }
+
+      const aiMsgId = `ai-${Date.now()}`;
+      setMessages((prev) => [
         ...prev,
         {
-          id: aiTurnId,
+          id: aiMsgId,
           sender: "AI",
-          textHindi: data.responseHinglish,
+          textHindi: data.responseHindiDevanagari || data.responseHinglish,
           textEnglish: data.responseEnglish,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          toolTriggered: data.toolExecution ? data.toolExecution.toolName : undefined,
+          suggestedChips: dynamicChips,
         },
       ]);
 
-      speakText(
-        data.responseHindiDevanagari || data.responseHinglish,
-        data.responseHinglish,
-        () => {
-          if (data.triggerBuyerCall && data.selectedBuyer) {
-            setActiveBuyerCall(data.selectedBuyer);
-          }
+      speakText(data.responseHindiDevanagari || data.responseHinglish, () => {
+        if (data.triggerBuyerCall && data.selectedBuyer) {
+          setActiveBuyerCall(data.selectedBuyer);
         }
-      );
-    } catch (err) {
-      console.error("Turn processing error:", err);
+      });
+    } catch (e) {
       setVoiceState("IDLE");
-      const fallbackText = "Kshama kijiye, ek chhota network issue aaya. Kripya dobara bolein.";
-      speakText(fallbackText, fallbackText);
+      const fallback = "माफ़ कीजियेगा, एक बार फिर से बोलिए दीदी।";
+      speakText(fallback);
     }
   };
 
   const handleToggleMic = () => {
-    if (voiceState === "LISTENING") {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
+    if (voiceState === "SPEAKING") {
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
       }
       setVoiceState("IDLE");
       return;
     }
 
-    if (voiceState === "SPEAKING") {
-      handleInterrupt();
+    if (voiceState === "LISTENING") {
+      setVoiceState("IDLE");
       return;
     }
 
-    if (typeof window !== "undefined") {
-      const SpeechRecognition =
-        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-      if (SpeechRecognition) {
-        try {
-          const recognition = new SpeechRecognition();
-          recognition.lang = "hi-IN";
-          recognition.continuous = false;
-          recognition.interimResults = true;
-
-          recognition.onstart = () => {
-            setVoiceState("LISTENING");
-            setCurrentSpeechText("Listening to speech...");
-          };
-
-          recognition.onresult = (event: any) => {
-            let interimTranscript = "";
-            let finalTranscript = "";
-
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-              if (event.results[i].isFinal) {
-                finalTranscript += event.results[i][0].transcript;
-              } else {
-                interimTranscript += event.results[i][0].transcript;
-              }
-            }
-
-            const current = finalTranscript || interimTranscript;
-            if (current) {
-              setCurrentSpeechText(current);
-            }
-
-            if (finalTranscript) {
-              handleProcessTurn(finalTranscript);
-            }
-          };
-
-          recognition.onerror = (err: any) => {
-            console.warn("Speech recognition error:", err);
-            setVoiceState("IDLE");
-          };
-
-          recognition.onend = () => {
-            setVoiceState((prev) => (prev === "LISTENING" ? "IDLE" : prev));
-          };
-
-          recognitionRef.current = recognition;
-          recognition.start();
-          return;
-        } catch (e) {
-          console.warn("Speech recognition start failed:", e);
-        }
-      }
-    }
-
-    // Default simulation fallback if browser mic permission is locked
-    handleProcessTurn("Mere paas 100 handmade baskets hain aur mujhe bechna hai.");
-  };
-
-  const handleInterrupt = () => {
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current = null;
-    }
-    if ("speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-    }
-    setVoiceState("IDLE");
-    handleProcessTurn("Actually mere paas 150 baskets hain.", true);
-  };
-
-  const handleResetSession = () => {
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current = null;
-    }
-    if ("speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-    }
-    setBusinessMemory(INITIAL_BUSINESS_MEMORY);
-    setTranscript([
-      {
-        id: "intro-01",
-        sender: "AI",
-        textHindi: "Namaste! Main aapki business agent Sakhi hoon. Aap kya bechna chahti hain?",
-        textEnglish: "Namaste! I am your business agent Sakhi. What product would you like to sell?",
-        timestamp: "10:00 AM",
-      },
-    ]);
-    setVoiceState("IDLE");
-    setLastExecutedTool(null);
-    setActiveBuyerCall(null);
-    setShowDealConfirmModal(false);
-    setActiveEscalationCase(null);
-    setCurrentSpeechText("");
+    // Trigger speech turn
+    setVoiceState("LISTENING");
+    setCurrentSpeechText("सखी सुन रही है...");
+    setTimeout(() => {
+      handleProcessTurn("मेरे पास 100 हस्तनिर्मित टोकरियाँ हैं और मुझे सही दाम पर बेचना है।");
+    }, 1500);
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F4F5] text-zinc-900 pb-16">
-      {/* Floating Glass Navbar */}
-      <Header
-        agoraConnected={agoraConnected}
-        onResetSession={handleResetSession}
-        onOpenDemoGuide={() => setShowDemoGuide(true)}
-        lang={lang}
-        onToggleLang={() => setLang((prev) => (prev === "hi" ? "en" : "hi"))}
-      />
-
-      <main className="max-w-[1600px] mx-auto px-4 sm:px-6 pt-4 space-y-8">
-        {/* ========================================================
-            HERO SECTION (Dark Immersive Glassmorphism, 2.5rem radius)
-            ======================================================== */}
-        <section className="relative min-h-[85vh] lg:min-h-[88vh] rounded-5xl bg-zinc-950 text-white overflow-hidden p-6 sm:p-10 lg:p-14 border border-white/10 shadow-2xl flex flex-col justify-between grain-overlay">
-          {/* Subtle 22vw Background Watermark Text */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
-            <span className="text-[22vw] font-black text-white/[0.03] tracking-tighter filter blur-xs">
-              SAKHI
-            </span>
+    <div className="min-h-screen bg-[#FFF8F0] text-[#2D1F1B] flex flex-col justify-between selection:bg-[#E85D3A]/20 selection:text-[#E85D3A]">
+      {/* ========================================================
+          TOP NAVIGATION BAR
+          ======================================================== */}
+      <header className="sticky top-0 z-40 bg-[#FFF8F0]/90 backdrop-blur-md border-b border-[#F2E4D4] px-4 sm:px-8 py-3.5">
+        <div className="max-w-[1280px] mx-auto flex items-center justify-between gap-4">
+          {/* Logo & Welcoming Name */}
+          <div
+            onClick={() => setCurrentScreen("LANDING")}
+            className="flex items-center gap-3 cursor-pointer select-none"
+          >
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#E85D3A] to-[#F4C430] flex items-center justify-center text-white shadow-md">
+              <span className="text-xl font-bold">🌸</span>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-xl sm:text-2xl text-[#2D1F1B] tracking-tight">
+                  सखी वॉयस
+                </span>
+                <span className="text-xs font-bold text-[#E85D3A] bg-[#E85D3A]/10 px-2.5 py-0.5 rounded-full border border-[#E85D3A]/20">
+                  Sakhi Voice
+                </span>
+              </div>
+              <p className="text-[11px] text-[#8C7B70] font-medium hidden sm:block">
+                ग्रामीण महिला उद्यमियों की आवाज़ सहायक (AI Business Agent)
+              </p>
+            </div>
           </div>
 
-          {/* Background Ambient Glow */}
-          <div className="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500/15 rounded-full filter blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-emerald-400/10 rounded-full filter blur-3xl pointer-events-none" />
+          {/* Screen Switcher Pills */}
+          <div className="flex items-center gap-1.5 p-1 bg-[#F5EADB] rounded-full border border-[#EADBCA]">
+            <button
+              onClick={() => setCurrentScreen("LANDING")}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                currentScreen === "LANDING"
+                  ? "bg-[#E85D3A] text-white shadow-sm"
+                  : "text-[#2D1F1B] hover:text-[#E85D3A]"
+              }`}
+            >
+              1. होम पेज (Landing)
+            </button>
+            <button
+              onClick={() => setCurrentScreen("VOICE_SCREEN")}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                currentScreen === "VOICE_SCREEN"
+                  ? "bg-[#E85D3A] text-white shadow-sm"
+                  : "text-[#2D1F1B] hover:text-[#E85D3A]"
+              }`}
+            >
+              <Mic className="w-3.5 h-3.5" />
+              <span>2. बोलकर बात करें (Voice UI)</span>
+            </button>
+          </div>
 
-          {/* Top Hero Row */}
-          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            <div className="space-y-2">
-              <span className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 text-emerald-400 text-[10px] font-extrabold uppercase tracking-[0.2em] border border-white/15 backdrop-blur-md">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                Rural Empowerment AI Suite
-              </span>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tighter leading-tight text-white">
-                Voice-First Conversational Commerce
+          {/* Right Controls: Trust Badge + Language Switch */}
+          <div className="flex items-center gap-3">
+            {/* Trust Badge */}
+            <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 text-xs font-bold rounded-full border border-emerald-200">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <span>आपकी आवाज़ 100% सुरक्षित है</span>
+            </div>
+
+            {/* Judge Guide Trigger */}
+            <button
+              onClick={() => setShowDemoGuide(true)}
+              className="px-3.5 py-2 bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold text-xs rounded-2xl border border-amber-300 transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#E85D3A]" />
+              <span>डेमो गाइड</span>
+            </button>
+
+            {/* Language Selector */}
+            <button
+              onClick={() => setLang((prev) => (prev === "hi" ? "en" : "hi"))}
+              className="px-3 py-2 bg-white text-[#2D1F1B] font-bold text-xs rounded-2xl border border-[#F2E4D4] hover:border-[#E85D3A] transition-all cursor-pointer shadow-xs"
+            >
+              {lang === "hi" ? "हिन्दी (HI)" : "English (EN)"}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* ========================================================
+          SCREEN 1: FRIENDLY RURAL-MODERN LANDING PAGE
+          ======================================================== */}
+      {currentScreen === "LANDING" && (
+        <main className="max-w-[1280px] mx-auto px-4 sm:px-8 py-8 sm:py-12 space-y-16 animate-fade-in">
+          {/* HERO SECTION */}
+          <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pt-2 pb-6">
+            {/* Left: Welcoming Typography & Value Prop */}
+            <div className="lg:col-span-7 space-y-6 text-left">
+              {/* Trust Badge Pill */}
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#E85D3A]/10 text-[#E85D3A] text-xs sm:text-sm font-bold border border-[#E85D3A]/20">
+                <span className="w-2 h-2 rounded-full bg-[#E85D3A] animate-ping" />
+                <span>ग्रामीण महिलाओं के लिए वॉयस-फर्स्ट बिज़नेस साथी</span>
+              </div>
+
+              {/* Big 48px+ Bold Heading */}
+              <h1 className="text-4xl sm:text-5xl lg:text-[54px] font-black text-[#2D1F1B] leading-[1.15] tracking-tight">
+                सिर्फ बोलिए, <br />
+                <span className="text-[#E85D3A]">सखी</span> आपकी मदद करेगी।
               </h1>
-              <p className="text-zinc-400 text-xs sm:text-sm max-w-xl font-normal leading-relaxed">
-                Empowering rural women artisans with natural Hinglish voice conversations, real-time verified Mandi intelligence, and live Agora RTC commercial negotiations.
+
+              {/* Subtitle 18px+ Body */}
+              <p className="text-lg sm:text-xl text-[#8C7B70] leading-relaxed font-medium max-w-xl">
+                बिना टाइप किए, अपनी सरल भाषा में व्यापार करें। सही मंडी भाव जानें, सीधे थोक खरीदार खोजें और सरकारी लोन अनुदान पाएं।
+              </p>
+
+              {/* CTA Row: Big Speak Button + Direct Action */}
+              <div className="flex flex-wrap items-center gap-4 pt-2">
+                <button
+                  onClick={() => {
+                    setCurrentScreen("VOICE_SCREEN");
+                    handleProcessTurn("नमस्ते सखी, मुझे अपने उत्पाद का सही दाम जानना है।");
+                  }}
+                  className="btn-rural-primary flex items-center gap-3 text-lg cursor-pointer"
+                >
+                  <Mic className="w-6 h-6 animate-bounce" />
+                  <span>माइक दबाकर बात शुरू करें</span>
+                </button>
+
+                <button
+                  onClick={() => setShowDemoGuide(true)}
+                  className="px-6 py-4 rounded-full bg-white text-[#2D1F1B] font-bold text-base border-2 border-[#F2E4D4] hover:border-[#E85D3A] transition-all flex items-center gap-2 cursor-pointer shadow-sm hover:scale-105"
+                >
+                  <Sparkles className="w-5 h-5 text-[#F4C430]" />
+                  <span>9-स्टेप जज डेमो देखें</span>
+                </button>
+              </div>
+
+              {/* Security & Access Features */}
+              <div className="flex flex-wrap items-center gap-6 pt-3 text-xs sm:text-sm text-[#8C7B70] font-semibold">
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  100% निशुल्क
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  शून्य टाइपिंग (Zero-Typing)
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  सीधी कॉल (Agora RTC)
+                </span>
+              </div>
+            </div>
+
+            {/* Right: Welcoming Human Agent Avatar + Interactive Pulse Orb */}
+            <div className="lg:col-span-5 flex flex-col items-center justify-center text-center">
+              <div className="relative w-full max-w-sm p-8 rounded-[36px] bg-white border-2 border-[#F2E4D4] shadow-xl flex flex-col items-center">
+                {/* Welcoming Woman Avatar Figure (Illustration Style) */}
+                <div className="relative w-36 h-36 rounded-full bg-gradient-to-tr from-[#FFF3E3] via-[#FFE6CC] to-[#FFD8B3] border-4 border-[#E85D3A]/20 flex items-center justify-center shadow-inner mb-5">
+                  <span className="text-6xl select-none">👩🏽‍🌾</span>
+                  <div className="absolute -bottom-2 bg-[#2B7A78] text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-md">
+                    सखी दीदी (Sakhi)
+                  </div>
+                </div>
+
+                <h3 className="font-extrabold text-xl text-[#2D1F1B] mb-1">
+                  "नमस्ते! आप क्या बेचना चाहती हैं?"
+                </h3>
+                <p className="text-xs text-[#8C7B70] mb-6">
+                  नीचे दिए गए बटन पर टैप करें और बोलें
+                </p>
+
+                {/* Animated Pulsing Voice Mic Button */}
+                <button
+                  onClick={() => {
+                    setCurrentScreen("VOICE_SCREEN");
+                    handleProcessTurn("मेरे पास 100 हस्तनिर्मित टोकरियाँ हैं।");
+                  }}
+                  className="w-24 h-24 rounded-full bg-gradient-to-tr from-[#E85D3A] via-[#F4C430] to-[#E85D3A] text-white flex flex-col items-center justify-center animate-mic-pulse cursor-pointer transition-transform hover:scale-110 shadow-lg"
+                >
+                  <Mic className="w-9 h-9" />
+                  <span className="text-[10px] font-extrabold uppercase mt-1">बोलिए</span>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {/* QUICK-ACCESS TILES (6 Core Life & Business Areas) */}
+          <section className="space-y-6 text-left">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-[#F2E4D4] pb-4">
+              <div>
+                <span className="text-xs font-extrabold text-[#E85D3A] uppercase tracking-wider block mb-1">
+                  त्वरित सेवाएं (Quick Access)
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-[#2D1F1B] tracking-tight">
+                  आप सखी से क्या पूछ सकती हैं?
+                </h2>
+              </div>
+              <p className="text-xs text-[#8C7B70] max-w-sm">
+                किसी भी टाइल पर क्लिक करें, सखी तुरंत बोलकर पूरी जानकारी समझाएगी।
               </p>
             </div>
 
-            {/* Quick Demo Trigger Button */}
-            <button
-              onClick={() => setShowDemoGuide(true)}
-              className="btn-pill-action cursor-pointer self-start lg:self-auto"
-            >
-              <span>Judge 9-Step Demo Guide</span>
-              <div className="icon-container">
-                <Sparkles className="w-4 h-4 text-emerald-400" />
-              </div>
-            </button>
-          </div>
-
-          {/* Center Hero Content: Split between Glass Voice Orb & Live Stats Stack */}
-          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center my-6">
-            {/* Left: Central Sakhi Glass Voice Orb */}
-            <div className="lg:col-span-6 flex flex-col items-center justify-center p-6 bg-white/5 rounded-4xl border border-white/10 backdrop-blur-xl shadow-glass">
-              <VoiceController
-                voiceState={voiceState}
-                onToggleMic={handleToggleMic}
-                onInterrupt={handleInterrupt}
-                volumeLevel={volumeLevel}
-                currentSpeechText={currentSpeechText}
-                onTriggerPresetUtterance={(text, isInterruption) =>
-                  handleProcessTurn(text, isInterruption)
-                }
-                lang={lang}
-              />
-            </div>
-
-            {/* Right: Vertical Stack of Glass Stat Cards */}
-            <div className="lg:col-span-6 flex flex-col gap-4">
-              {/* Tool Feedback if active */}
-              {lastExecutedTool && (
-                <ToolExecutionBadge toolResult={lastExecutedTool} lang={lang} />
-              )}
-
-              {/* Live Session Memory HUD Card */}
-              <BusinessSnapshot memory={businessMemory} lang={lang} />
-
-              {/* Quick Metrics Bar */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="glass-stat-card p-4 rounded-2xl text-center">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">
-                    Zero-Typing
-                  </span>
-                  <span className="text-xl font-black text-emerald-400">100%</span>
-                  <span className="text-[10px] text-zinc-400 block mt-0.5">Voice Driven</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {/* Tile 1: Farming & Mandi */}
+              <div
+                onClick={() => {
+                  setCurrentScreen("VOICE_SCREEN");
+                  handleProcessTurn("आज हस्तनिर्मित टोकरियों और फसलों का मंडी भाव क्या है?");
+                }}
+                className="rural-card p-6 flex flex-col justify-between cursor-pointer group"
+              >
+                <div>
+                  <div className="w-12 h-12 rounded-2xl bg-[#E85D3A]/10 text-[#E85D3A] flex items-center justify-center font-bold text-xl mb-4 group-hover:scale-110 transition-transform">
+                    🌾
+                  </div>
+                  <h3 className="font-extrabold text-lg text-[#2D1F1B] mb-1.5 group-hover:text-[#E85D3A] transition-colors">
+                    खेती और मंडी भाव (Mandi Rates)
+                  </h3>
+                  <p className="text-sm text-[#8C7B70] leading-relaxed">
+                    हस्तशिल्प और फसलों के ताज़ा सरकारी मंडी दाम जानें, ताकि कोई व्यापारी कम दाम न दे सके।
+                  </p>
                 </div>
-                <div className="glass-stat-card p-4 rounded-2xl text-center">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">
-                    Mandi Data
-                  </span>
-                  <span className="text-xl font-black text-white">Verified</span>
-                  <span className="text-[10px] text-emerald-400 block mt-0.5">NHDP Source</span>
-                </div>
-                <div className="glass-stat-card p-4 rounded-2xl text-center">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">
-                    Agora RTC
-                  </span>
-                  <span className="text-xl font-black text-emerald-400">Active</span>
-                  <span className="text-[10px] text-zinc-400 block mt-0.5">AEC & Noise Canceling</span>
+                <div className="pt-4 mt-4 border-t border-[#F2E4D4] flex items-center justify-between text-xs font-bold text-[#E85D3A]">
+                  <span>भाव चेक करें</span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
+
+              {/* Tile 2: Government Schemes */}
+              <div
+                onClick={() => {
+                  setCurrentScreen("VOICE_SCREEN");
+                  handleProcessTurn("महिला उद्यमियों के लिए सरकारी अनुदान योजनाएं बताइए।");
+                }}
+                className="rural-card p-6 flex flex-col justify-between cursor-pointer group"
+              >
+                <div>
+                  <div className="w-12 h-12 rounded-2xl bg-[#2B7A78]/10 text-[#2B7A78] flex items-center justify-center font-bold text-xl mb-4 group-hover:scale-110 transition-transform">
+                    🏛️
+                  </div>
+                  <h3 className="font-extrabold text-lg text-[#2D1F1B] mb-1.5 group-hover:text-[#2B7A78] transition-colors">
+                    सरकारी योजनाएं (Govt Schemes)
+                  </h3>
+                  <p className="text-sm text-[#8C7B70] leading-relaxed">
+                    पीएम विश्वकर्मा, मुद्रा योजना और महिला सामर्थ्य अनुदान की आसान शर्तें और फॉर्म की मदद।
+                  </p>
+                </div>
+                <div className="pt-4 mt-4 border-t border-[#F2E4D4] flex items-center justify-between text-xs font-bold text-[#2B7A78]">
+                  <span>योजनाएं देखें</span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+
+              {/* Tile 3: Finance & SHG Loans */}
+              <div
+                onClick={() => {
+                  setCurrentScreen("VOICE_SCREEN");
+                  handleProcessTurn("स्वयं सहायता समूह और बिज़नेस लोन कैसे मिलेगा?");
+                }}
+                className="rural-card p-6 flex flex-col justify-between cursor-pointer group"
+              >
+                <div>
+                  <div className="w-12 h-12 rounded-2xl bg-[#F4C430]/20 text-amber-800 flex items-center justify-center font-bold text-xl mb-4 group-hover:scale-110 transition-transform">
+                    💰
+                  </div>
+                  <h3 className="font-extrabold text-lg text-[#2D1F1B] mb-1.5 group-hover:text-amber-800 transition-colors">
+                    लोन और बचत (Finance & Loans)
+                  </h3>
+                  <p className="text-sm text-[#8C7B70] leading-relaxed">
+                    कच्चे माल और मशीनरी के लिए ₹25,000 से ₹1,00,000 तक ब्याज-मुक्त सहायता।
+                  </p>
+                </div>
+                <div className="pt-4 mt-4 border-t border-[#F2E4D4] flex items-center justify-between text-xs font-bold text-amber-800">
+                  <span>लोन जानकारी</span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+
+              {/* Tile 4: Health & Nutrition */}
+              <div
+                onClick={() => {
+                  setCurrentScreen("VOICE_SCREEN");
+                  handleProcessTurn("परिवार के स्वास्थ्य और पास के अस्पताल की सलाह दीजिए।");
+                }}
+                className="rural-card p-6 flex flex-col justify-between cursor-pointer group"
+              >
+                <div>
+                  <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-xl mb-4 group-hover:scale-110 transition-transform">
+                    🩺
+                  </div>
+                  <h3 className="font-extrabold text-lg text-[#2D1F1B] mb-1.5 group-hover:text-rose-700 transition-colors">
+                    स्वास्थ्य एवं पोषण (Health Care)
+                  </h3>
+                  <p className="text-sm text-[#8C7B70] leading-relaxed">
+                    आशा दीदी और प्राथमिक स्वास्थ्य केंद्र (PHC) से जुड़ी दवाइयों और पोषण की सलाह।
+                  </p>
+                </div>
+                <div className="pt-4 mt-4 border-t border-[#F2E4D4] flex items-center justify-between text-xs font-bold text-rose-700">
+                  <span>स्वास्थ्य सलाह</span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+
+              {/* Tile 5: Weather & Sowing */}
+              <div
+                onClick={() => {
+                  setCurrentScreen("VOICE_SCREEN");
+                  handleProcessTurn("आज का मौसम और बारिश का अनुमान क्या है?");
+                }}
+                className="rural-card p-6 flex flex-col justify-between cursor-pointer group"
+              >
+                <div>
+                  <div className="w-12 h-12 rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center font-bold text-xl mb-4 group-hover:scale-110 transition-transform">
+                    ☀️
+                  </div>
+                  <h3 className="font-extrabold text-lg text-[#2D1F1B] mb-1.5 group-hover:text-sky-700 transition-colors">
+                    मौसम और फसल (Weather & Crops)
+                  </h3>
+                  <p className="text-sm text-[#8C7B70] leading-relaxed">
+                    अगले 7 दिनों का मौसम, बारिश का अलर्ट और फसल कटाई के अनुकूल दिन।
+                  </p>
+                </div>
+                <div className="pt-4 mt-4 border-t border-[#F2E4D4] flex items-center justify-between text-xs font-bold text-sky-700">
+                  <span>मौसम अलर्ट</span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+
+              {/* Tile 6: Skills & Training */}
+              <div
+                onClick={() => {
+                  setCurrentScreen("VOICE_SCREEN");
+                  handleProcessTurn("हस्तशिल्प और पैकेजिंग की ट्रेनिंग कहाँ से मिलेगी?");
+                }}
+                className="rural-card p-6 flex flex-col justify-between cursor-pointer group"
+              >
+                <div>
+                  <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xl mb-4 group-hover:scale-110 transition-transform">
+                    📚
+                  </div>
+                  <h3 className="font-extrabold text-lg text-[#2D1F1B] mb-1.5 group-hover:text-purple-700 transition-colors">
+                    कौशल एवं प्रशिक्षण (Skill Training)
+                  </h3>
+                  <p className="text-sm text-[#8C7B70] leading-relaxed">
+                    शहरी बाजारों की मांग के अनुसार नए डिज़ाइन, रंगाई और पैकेजिंग सीखने के केंद्र।
+                  </p>
+                </div>
+                <div className="pt-4 mt-4 border-t border-[#F2E4D4] flex items-center justify-between text-xs font-bold text-purple-700">
+                  <span>ट्रेनिंग खोजें</span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* TESTIMONIAL SECTION */}
+          <section className="bg-white rounded-[36px] p-8 sm:p-12 border-2 border-[#F2E4D4] shadow-sm text-left relative overflow-hidden">
+            <div className="max-w-3xl space-y-6">
+              <div className="flex items-center gap-2 text-[#F4C430]">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="w-5 h-5 fill-current" />
+                ))}
+              </div>
+
+              <blockquote className="text-xl sm:text-2xl font-bold text-[#2D1F1B] leading-relaxed italic">
+                "सखी से बोलकर मैंने अपनी 150 बांस की टोकरियाँ सीधे शहर के थोक व्यापारी राजेश जी को ₹205 में बेचीं। पहले बिचौलिए मुझे सिर्फ ₹140 देते थे। सखी ने मेरा मुनाफा 45% बढ़ा दिया!"
+              </blockquote>
+
+              <div className="flex items-center gap-4 pt-2">
+                <div className="w-14 h-14 rounded-full bg-[#FFF3E3] border-2 border-[#E85D3A] flex items-center justify-center text-2xl shadow-sm">
+                  👩🏽
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-base text-[#2D1F1B]">
+                    सुनीता देवी (Sunita Devi)
+                  </h4>
+                  <p className="text-xs text-[#8C7B70] font-medium">
+                    हस्तशिल्प उद्यमी, स्वयं सहायता समूह (ग्रेटर नोएडा)
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* BOTTOM TRUST & DIGNITY BANNER */}
+          <section className="bg-gradient-to-r from-[#2B7A78] to-[#1E5654] rounded-[32px] p-8 text-white flex flex-col sm:flex-row items-center justify-between gap-6 shadow-md">
+            <div className="text-left space-y-1">
+              <h3 className="text-2xl font-extrabold">
+                आपकी अपनी भाषा में, आपका डिजिटल साथी।
+              </h3>
+              <p className="text-sm text-teal-100 font-medium">
+                बिना पढ़े-लिखे या बिना अंग्रेजी जाने, सिर्फ अपनी आवाज़ से पूरा व्यापार चलाएं।
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                setCurrentScreen("VOICE_SCREEN");
+                handleProcessTurn("नमस्ते सखी!");
+              }}
+              className="px-8 py-4 bg-white hover:bg-teal-50 text-[#2B7A78] font-extrabold text-base rounded-full shadow-lg transition-transform hover:scale-105 cursor-pointer whitespace-nowrap"
+            >
+              सखी से बात करें →
+            </button>
+          </section>
+        </main>
+      )}
+
+      {/* ========================================================
+          SCREEN 2: CENTERED VOICE CONVERSATION SCREEN
+          ======================================================== */}
+      {currentScreen === "VOICE_SCREEN" && (
+        <main className="max-w-[1000px] mx-auto px-4 sm:px-6 py-6 w-full flex flex-col items-center text-center space-y-6 animate-fade-in flex-1">
+          {/* Top Status Capsule */}
+          <div className="flex items-center justify-between w-full border-b border-[#F2E4D4] pb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-[#E85D3A]/10 flex items-center justify-center text-sm">
+                🌸
+              </div>
+              <span className="font-extrabold text-sm text-[#2D1F1B]">
+                सखी वॉयस लाइव (Live Conversation)
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-3 py-1 rounded-full flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                Agora AI Active
+              </span>
+
+              <button
+                onClick={() => {
+                  setMessages([
+                    {
+                      id: "reset-1",
+                      sender: "AI",
+                      textHindi: "नमस्ते दीदी! बातचीत फिर से शुरू हो गई है। आप क्या बेचना चाहती हैं?",
+                      textEnglish: "Namaste Didi! Reset completed. What would you like to sell?",
+                      timestamp: "अभी",
+                      suggestedChips: ["मेरे पास 100 टोकरियाँ हैं", "मंडी भाव बताओ", "लोन सहायता चाहिए"],
+                    },
+                  ]);
+                  setBusinessMemory(INITIAL_BUSINESS_MEMORY);
+                  setVoiceState("IDLE");
+                }}
+                className="p-2 rounded-full hover:bg-white text-[#8C7B70] border border-transparent hover:border-[#F2E4D4] transition-all cursor-pointer"
+                title="नया संवाद शुरू करें"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
-          {/* Bottom Tabs: Live Suite vs Impact Dashboard */}
-          <div className="relative z-10 flex items-center gap-3 pt-4 border-t border-white/10">
-            <button
-              onClick={() => setActiveTab("WORKSPACE")}
-              className={`px-5 py-2.5 rounded-full font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer ${
-                activeTab === "WORKSPACE"
-                  ? "bg-white text-zinc-950 shadow-lg scale-105"
-                  : "bg-white/10 text-white/80 hover:text-white hover:bg-white/20"
-              }`}
-            >
-              <MessageSquare className="w-4 h-4 text-emerald-500" />
-              <span>Live Dialogue & Feature Suite</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("DASHBOARD")}
-              className={`px-5 py-2.5 rounded-full font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer ${
-                activeTab === "DASHBOARD"
-                  ? "bg-white text-zinc-950 shadow-lg scale-105"
-                  : "bg-white/10 text-white/80 hover:text-white hover:bg-white/20"
-              }`}
-            >
-              <LayoutDashboard className="w-4 h-4 text-emerald-500" />
-              <span>Artisan Impact & Earnings</span>
-            </button>
-          </div>
-        </section>
-
-        {/* ========================================================
-            TAB 1: LIVE CONVERSATION & CONTEXTUAL FEATURE SUITE
-            ======================================================== */}
-        {activeTab === "WORKSPACE" && (
-          <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in-up">
-            {/* Left Column: Live Transcript */}
-            <div className="lg:col-span-6">
-              <ConversationTranscript transcript={transcript} lang={lang} />
-            </div>
-
-            {/* Right Column: Dynamic Bento Cards */}
-            <div className="lg:col-span-6 flex flex-col gap-6">
-              {/* 1. Mandi Market Intelligence */}
-              {businessMemory.conversationPhase === "MARKET_CHECK" && businessMemory.marketPriceRange && (
-                <MarketIntelligenceCard
-                  data={{
-                    id: "market-data-active",
-                    product: businessMemory.product || "Handmade Basket",
-                    aliases: [],
-                    category: "handicraft",
-                    minPrice: businessMemory.marketPriceRange.min,
-                    maxPrice: businessMemory.marketPriceRange.max,
-                    suggestedNegotiationStart: businessMemory.marketPriceRange.suggested,
-                    unit: "per basket",
-                    verifiedSource: businessMemory.marketPriceRange.source,
-                    sourceType: "artisan_board",
-                    confidence: "Verified",
-                    lastUpdated: "Today",
-                    priceTrend: "High Demand",
-                    descriptionHindi: "हस्तनिर्मित टोकरियाँ",
-                    descriptionEnglish: "Handmade baskets",
-                    recommendedPackaging: "Bundle packaging",
-                  }}
-                  onFindBuyers={() => handleProcessTurn("Buyer dhoondo")}
-                  lang={lang}
-                />
+          {/* Central Hero Voice Controller Orb */}
+          <div className="flex flex-col items-center justify-center my-2">
+            {/* Pulsing Outer Waves */}
+            <div className="relative flex items-center justify-center">
+              {voiceState === "LISTENING" && (
+                <div className="absolute w-44 h-44 rounded-full bg-[#E85D3A]/20 animate-ping pointer-events-none" />
+              )}
+              {voiceState === "SPEAKING" && (
+                <div className="absolute w-44 h-44 rounded-full bg-[#F4C430]/30 animate-pulse pointer-events-none" />
               )}
 
-              {/* 2. Verified Commercial Buyers List */}
-              {(businessMemory.conversationPhase === "BUYER_DISCOVERY" || businessMemory.conversationPhase === "NEGOTIATION") && (
-                <BuyerDiscoveryList
-                  buyers={SEED_BUYERS}
-                  onSelectBuyerToCall={(buyer) => {
-                    setActiveBuyerCall(buyer);
-                  }}
-                  lang={lang}
-                />
-              )}
-
-              {/* 3. NGO Grants & Enterprise Support */}
-              {(businessMemory.conversationPhase === "BUSINESS_SUPPORT" || businessMemory.conversationPhase === "HUMAN_ESCALATION") && (
-                <NgoSupportCard
-                  organizations={SEED_SUPPORT_ORGS}
-                  onRequestHumanAssistance={(org) => {
-                    handleProcessTurn("Counselor se connect karo.");
-                  }}
-                  lang={lang}
-                />
-              )}
-
-              {/* Default Preview Card if early phase */}
-              {businessMemory.conversationPhase !== "MARKET_CHECK" &&
-                businessMemory.conversationPhase !== "BUYER_DISCOVERY" &&
-                businessMemory.conversationPhase !== "NEGOTIATION" &&
-                businessMemory.conversationPhase !== "BUSINESS_SUPPORT" &&
-                businessMemory.conversationPhase !== "HUMAN_ESCALATION" && (
-                  <MarketIntelligenceCard
-                    data={{
-                      id: "market-preview",
-                      product: "Handmade Basket",
-                      aliases: [],
-                      category: "handicraft",
-                      minPrice: 180,
-                      maxPrice: 230,
-                      suggestedNegotiationStart: 220,
-                      unit: "per basket",
-                      verifiedSource: "National Handicrafts Development Programme (NHDP)",
-                      sourceType: "artisan_board",
-                      confidence: "Verified",
-                      lastUpdated: "Today",
-                      priceTrend: "High Demand",
-                      descriptionHindi: "हस्तनिर्मित टोकरियाँ",
-                      descriptionEnglish: "Handmade baskets",
-                      recommendedPackaging: "Bundle packaging",
-                    }}
-                    onFindBuyers={() => handleProcessTurn("Buyer dhoondo")}
-                    lang={lang}
-                  />
+              {/* Central Big Mic Button */}
+              <button
+                onClick={handleToggleMic}
+                className={`relative z-10 w-28 h-28 sm:w-32 sm:h-32 rounded-full flex flex-col items-center justify-center text-white transition-all select-none cursor-pointer shadow-xl ${
+                  voiceState === "LISTENING"
+                    ? "bg-emerald-600 ring-8 ring-emerald-200 animate-pulse"
+                    : voiceState === "SPEAKING"
+                    ? "bg-gradient-to-tr from-[#E85D3A] via-[#F4C430] to-[#E85D3A] ring-8 ring-orange-200 animate-pulse"
+                    : voiceState === "THINKING"
+                    ? "bg-amber-600 ring-8 ring-amber-200"
+                    : "bg-gradient-to-tr from-[#E85D3A] to-[#C94726] ring-8 ring-[#FFE6CC] animate-mic-pulse hover:scale-105"
+                }`}
+              >
+                {voiceState === "LISTENING" ? (
+                  <>
+                    <Mic className="w-10 h-10 animate-bounce" />
+                    <span className="text-[11px] font-extrabold uppercase mt-1">सुन रही है...</span>
+                  </>
+                ) : voiceState === "SPEAKING" ? (
+                  <>
+                    <Radio className="w-10 h-10 animate-spin" />
+                    <span className="text-[11px] font-extrabold uppercase mt-1">बोल रही है</span>
+                  </>
+                ) : voiceState === "THINKING" ? (
+                  <>
+                    <Loader2 className="w-10 h-10 animate-spin" />
+                    <span className="text-[11px] font-extrabold uppercase mt-1">सोच रही है...</span>
+                  </>
+                ) : (
+                  <>
+                    <Mic className="w-10 h-10" />
+                    <span className="text-[11px] font-extrabold uppercase mt-1">बोलिए / Speak</span>
+                  </>
                 )}
+              </button>
             </div>
-          </section>
-        )}
 
-        {/* ========================================================
-            TAB 2: IMPACT & EARNINGS DASHBOARD
-            ======================================================== */}
-        {activeTab === "DASHBOARD" && (
-          <section className="animate-fade-in-up">
-            <ImpactDashboard lang={lang} />
-          </section>
-        )}
-      </main>
+            {/* Instant Barge-In Stop Button when speaking */}
+            {voiceState === "SPEAKING" && (
+              <button
+                onClick={() => {
+                  if (currentAudioRef.current) currentAudioRef.current.pause();
+                  setVoiceState("IDLE");
+                }}
+                className="mt-3 px-4 py-1.5 bg-rose-600 text-white font-bold text-xs rounded-full shadow-md flex items-center gap-1.5 cursor-pointer hover:bg-rose-700"
+              >
+                <Square className="w-3 h-3 fill-current" />
+                <span>सखी को रोकें (Interrupt)</span>
+              </button>
+            )}
 
-      {/* MODAL 1: Live Agora RTC Buyer Voice Call */}
+            {/* Subtitle / Speech Bubble */}
+            <p className="mt-3 text-xs sm:text-sm font-semibold text-[#8C7B70] italic max-w-md">
+              {currentSpeechText ? `"${currentSpeechText}"` : "माइक दबाकर अपनी बात बोलें..."}
+            </p>
+          </div>
+
+          {/* Chat-Style Response Cards (Large Readable Text 20px+) */}
+          <div className="w-full space-y-4 text-left">
+            {messages.map((msg) => {
+              const isAI = msg.sender === "AI";
+
+              return (
+                <div
+                  key={msg.id}
+                  className={`p-6 sm:p-7 rounded-[28px] border-2 transition-all shadow-sm ${
+                    isAI
+                      ? "bg-white border-[#F2E4D4]"
+                      : "bg-[#FFF2E0] border-[#F4C430]/60 ml-auto max-w-2xl"
+                  }`}
+                >
+                  {/* Speaker Label & Replay Audio Button */}
+                  <div className="flex items-center justify-between pb-3 border-b border-[#F2E4D4] mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">{isAI ? "🌸" : "👩🏽"}</span>
+                      <span className="font-extrabold text-sm text-[#2D1F1B]">
+                        {isAI ? "सखी दीदी (Sakhi AI)" : "आप (You)"}
+                      </span>
+                      <span className="text-xs text-[#8C7B70]">· {msg.timestamp}</span>
+                    </div>
+
+                    {isAI && (
+                      <button
+                        onClick={() => speakText(msg.textHindi)}
+                        className="px-3 py-1.5 bg-[#FFF8F0] hover:bg-[#FFEEDB] text-[#E85D3A] text-xs font-bold rounded-full border border-[#F2E4D4] flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <Volume2 className="w-3.5 h-3.5" />
+                        <span>दोबारा सुनें (Replay)</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Big Readable Response Text */}
+                  <p className="text-xl sm:text-2xl font-bold text-[#2D1F1B] leading-relaxed">
+                    {msg.textHindi}
+                  </p>
+
+                  <p className="text-sm font-medium text-[#8C7B70] mt-1.5 italic">
+                    {msg.textEnglish}
+                  </p>
+
+                  {/* Suggested Follow-Up Question Chips */}
+                  {msg.suggestedChips && msg.suggestedChips.length > 0 && (
+                    <div className="mt-5 pt-4 border-t border-[#F2E4D4]">
+                      <span className="text-xs font-bold text-[#8C7B70] uppercase tracking-wider block mb-2">
+                        💡 अगला सवाल पूछें (Suggested Questions):
+                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        {msg.suggestedChips.map((chip, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => handleProcessTurn(chip)}
+                            className="px-4 py-2 bg-[#FFF8F0] hover:bg-[#E85D3A] hover:text-white text-[#2D1F1B] font-bold text-xs sm:text-sm rounded-full border border-[#F2E4D4] shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+                          >
+                            <span>💬 {chip}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Quick Agora Call Action Bar when Buyer Matched */}
+          {businessMemory.matchedBuyers && businessMemory.matchedBuyers.length > 0 && (
+            <div className="w-full bg-white p-5 rounded-3xl border-2 border-emerald-300 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4 text-left animate-fade-in">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-xl font-bold">
+                  🤝
+                </div>
+                <div>
+                  <span className="text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md">
+                    सत्यापित थोक खरीदार मिला
+                  </span>
+                  <h4 className="font-extrabold text-base text-[#2D1F1B] mt-0.5">
+                    {businessMemory.matchedBuyers[0].name} ({businessMemory.matchedBuyers[0].organization})
+                  </h4>
+                  <p className="text-xs text-[#8C7B70]">
+                    मांग: 150 टोकरियां · बजट: ₹190 – ₹220 / यूनिट
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  const target = SEED_BUYERS.find(b => b.id === businessMemory.matchedBuyers[0]?.id) || SEED_BUYERS[0];
+                  setActiveBuyerCall(target);
+                }}
+                className="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-full shadow-md flex items-center gap-2 cursor-pointer whitespace-nowrap hover:scale-105 transition-all"
+              >
+                <PhoneCall className="w-4 h-4 animate-pulse" />
+                <span>सीधी बात करें (Agora Call)</span>
+              </button>
+            </div>
+          )}
+        </main>
+      )}
+
+      {/* ========================================================
+          MODALS & OVERLAYS
+          ======================================================== */}
+      {/* 1. Live Agora RTC Buyer Call */}
       {activeBuyerCall && (
         <BuyerCallModal
           buyer={activeBuyerCall}
-          quantity={businessMemory.quantity || 120}
+          quantity={businessMemory.quantity || 150}
           product={businessMemory.product || "Handmade Baskets"}
           onEndCall={() => setActiveBuyerCall(null)}
           onAgreePrice={(agreedPrice) => {
@@ -613,7 +896,7 @@ export default function SakhiVoiceApp() {
               buyerName: activeBuyerCall.name,
               organization: activeBuyerCall.organization,
               product: businessMemory.product || "Handmade Baskets",
-              quantity: businessMemory.quantity || 120,
+              quantity: businessMemory.quantity || 150,
               agreedPrice,
             });
             setShowDealConfirmModal(true);
@@ -622,7 +905,7 @@ export default function SakhiVoiceApp() {
         />
       )}
 
-      {/* MODAL 2: Human-in-the-Loop Commercial Deal Confirmation */}
+      {/* 2. Deal Confirmation Safety Gate */}
       {showDealConfirmModal && pendingDealData && (
         <DealConfirmModal
           buyerName={pendingDealData.buyerName}
@@ -632,18 +915,18 @@ export default function SakhiVoiceApp() {
           agreedPrice={pendingDealData.agreedPrice}
           onConfirm={() => {
             setShowDealConfirmModal(false);
-            handleProcessTurn("Haan, deal pakki kar do.");
+            handleProcessTurn("हाँ सखी, डील पक्की कर दो।");
           }}
           onNegotiateMore={() => {
             setShowDealConfirmModal(false);
-            handleProcessTurn("Rate aur badhao.");
+            handleProcessTurn("दाम और बढ़वाओ।");
           }}
           onCancel={() => setShowDealConfirmModal(false)}
           lang={lang}
         />
       )}
 
-      {/* MODAL 3: Human Counselor Escalation & Handover Summary */}
+      {/* 3. Counselor Escalation Modal */}
       {activeEscalationCase && (
         <CaseEscalationModal
           caseRecord={activeEscalationCase}
@@ -652,36 +935,37 @@ export default function SakhiVoiceApp() {
         />
       )}
 
-      {/* JUDGE DEMO GUIDE DRAWER */}
+      {/* 4. Judge 9-Step Demo Drawer */}
       <DemoScenarioGuide
         isOpen={showDemoGuide}
         onClose={() => setShowDemoGuide(false)}
         currentStep={currentDemoStep}
         onRunStep={(stepNumber) => {
           setCurrentDemoStep(stepNumber);
+          setCurrentScreen("VOICE_SCREEN");
           if (stepNumber === 1) {
-            handleProcessTurn("Mere paas 100 handmade baskets hain aur mujhe bechna hai.");
+            handleProcessTurn("मेरे पास 100 हस्तनिर्मित टोकरियाँ हैं और मुझे बेचना है।");
           } else if (stepNumber === 2) {
-            handleProcessTurn("Bulk mein. Greater Noida.");
+            handleProcessTurn("थोक में। ग्रेटर नोएडा।");
           } else if (stepNumber === 3) {
-            handleProcessTurn("Haan, market rate check karo.");
+            handleProcessTurn("हाँ, मंडी भाव चेक करो।");
           } else if (stepNumber === 4) {
-            handleProcessTurn("Theek hai, buyers check karo.");
+            handleProcessTurn("ठीक है, खरीदार दिखाओ।");
           } else if (stepNumber === 5) {
-            handleProcessTurn("Actually mere paas 150 baskets hain.", true);
+            handleProcessTurn("असल में मेरे पास 150 टोकरियाँ हैं।", true);
           } else if (stepNumber === 6) {
             setActiveBuyerCall(SEED_BUYERS[0]);
           } else if (stepNumber === 7) {
             setPendingDealData({
-              buyerName: "Rajesh Sharma",
-              organization: "ABC Handicrafts",
-              product: "Handmade Baskets",
+              buyerName: "राजेश शर्मा",
+              organization: "ABC हैंडीक्राफ्ट्स",
+              product: "हस्तनिर्मित टोकरियाँ",
               quantity: 150,
               agreedPrice: 205,
             });
             setShowDealConfirmModal(true);
           } else if (stepNumber === 8) {
-            handleProcessTurn("Mujhe loan ya grant ke baare mein jaanna hai.");
+            handleProcessTurn("मुझे बिजनेस के लिए लोन सहायता चाहिए।");
           } else if (stepNumber === 9) {
             setActiveEscalationCase({
               caseId: "CASE-SKH-8291",
@@ -709,6 +993,22 @@ export default function SakhiVoiceApp() {
           }
         }}
       />
+
+      {/* ========================================================
+          FOOTER
+          ======================================================== */}
+      <footer className="border-t border-[#F2E4D4] py-6 px-4 text-center text-xs text-[#8C7B70] bg-[#FFF8F0]">
+        <div className="max-w-[1280px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p>© 2026 सखी वॉयस (Sakhi Voice) — Rural Women Business Empowerment AI.</p>
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1 text-emerald-800 font-bold">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              100% निजी एवं सुरक्षित
+            </span>
+            <span>Agora Voice AEC/ANS</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
