@@ -193,44 +193,54 @@ export const VoiceController: React.FC<VoiceControllerProps> = ({
           </button>
 
           <button
+            onClick={() => onTriggerPresetUtterance("Bulk mein.")}
+            className="text-xs font-medium px-3 py-1.5 bg-white hover:bg-orange-50 hover:border-orange-300 text-[#3F2E1E] rounded-xl border border-[#DECDB8] shadow-sm transition-all"
+          >
+            💬 "Bulk mein."
+          </button>
+
+          <button
+            onClick={() => onTriggerPresetUtterance("Greater Noida.")}
+            className="text-xs font-medium px-3 py-1.5 bg-white hover:bg-orange-50 hover:border-orange-300 text-[#3F2E1E] rounded-xl border border-[#DECDB8] shadow-sm transition-all"
+          >
+            📍 "Greater Noida."
+          </button>
+
+          <button
+            onClick={() => onTriggerPresetUtterance("Haan, market rate check karo.")}
+            className="text-xs font-medium px-3 py-1.5 bg-white hover:bg-orange-50 hover:border-orange-300 text-[#3F2E1E] rounded-xl border border-[#DECDB8] shadow-sm transition-all"
+          >
+            📊 "Haan, market rate check karo"
+          </button>
+
+          <button
             onClick={() =>
               onTriggerPresetUtterance(
-                "Ruko, quantity actually 120 hai.",
+                "Actually mere paas 150 baskets hain.",
                 true // Barge-in interruption
               )
             }
             className="text-xs font-bold px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-xl border border-amber-300 shadow-sm transition-all flex items-center gap-1"
           >
-            ⚡ "Ruko, quantity actually 120 hai" <span className="text-[10px] bg-amber-200 text-amber-800 px-1 rounded">Barge-in</span>
+            ⚡ "Actually mere paas 150 baskets hain" <span className="text-[10px] bg-amber-200 text-amber-800 px-1 rounded">Barge-in</span>
+          </button>
+
+          <button
+            onClick={() => onTriggerPresetUtterance("Haan, buyer se baat karwao.")}
+            className="text-xs font-medium px-3 py-1.5 bg-white hover:bg-orange-50 hover:border-orange-300 text-[#3F2E1E] rounded-xl border border-[#DECDB8] shadow-sm transition-all"
+          >
+            🤝 "Buyer se baat karwao"
           </button>
 
           <button
             onClick={() =>
               onTriggerPresetUtterance(
-                "100 handmade baskets ka market mein kya rate chal raha hai?"
+                "Mujhe business ke liye loan chahiye."
               )
             }
             className="text-xs font-medium px-3 py-1.5 bg-white hover:bg-orange-50 hover:border-orange-300 text-[#3F2E1E] rounded-xl border border-[#DECDB8] shadow-sm transition-all"
           >
-            📊 "Market rate kya chal raha hai?"
-          </button>
-
-          <button
-            onClick={() => onTriggerPresetUtterance("Buyer dhoondo aur connect karo.")}
-            className="text-xs font-medium px-3 py-1.5 bg-white hover:bg-orange-50 hover:border-orange-300 text-[#3F2E1E] rounded-xl border border-[#DECDB8] shadow-sm transition-all"
-          >
-            🤝 "Buyer dhoondo aur baat karwao"
-          </button>
-
-          <button
-            onClick={() =>
-              onTriggerPresetUtterance(
-                "Mujhe production badhane ke liye financial support aur loan chahiye."
-              )
-            }
-            className="text-xs font-medium px-3 py-1.5 bg-white hover:bg-orange-50 hover:border-orange-300 text-[#3F2E1E] rounded-xl border border-[#DECDB8] shadow-sm transition-all"
-          >
-            🏛️ "Financial support & loan chahiye"
+            🏛️ "Mujhe business ke liye loan chahiye"
           </button>
         </div>
       </div>

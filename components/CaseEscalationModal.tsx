@@ -96,7 +96,7 @@ export const CaseEscalationModal: React.FC<CaseEscalationModalProps> = ({
                 {caseData.matchedOrganization.representativeName} (Counselor):
               </span>
               <p className="text-xs sm:text-sm text-purple-950 italic font-medium leading-relaxed">
-                "Namaste behenji! Mujhe Sakhi AI se aapka poora case context aur conversation summary mil gayi hai. Aapke 120 handmade baskets ki deal finalize ho gayi hai, aur aapko expansion ke liye ₹50,000 ki sahayata chahiye. Aapko dobara details batane ki zaroorat nahi hai, main aapka grant form direct approve kar rahi hoon."
+                "Namaste! Mujhe Sakhi se aapki saari details mil gayi hain. Aapki baskets ki deal finalize ho chuki hai, aur aapko business expand karne ke liye ₹50,000 ka support chahiye. Aapko dobara batane ki zaroorat nahi hai, main seedha aapka support process karti hoon."
               </p>
             </div>
           </div>

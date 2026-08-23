@@ -31,17 +31,17 @@ export const BuyerCallModal: React.FC<BuyerCallModalProps> = ({
   const [callTranscript, setCallTranscript] = useState<Array<{ sender: string; text: string; role: "buyer" | "user" | "ai" }>>([
     {
       sender: buyer.name,
-      text: buyer.greetingHindi,
+      text: "Namaste! Main Rajesh Sharma bol raha hoon ABC Handicrafts se. Humein handmade baskets chahiye.",
       role: "buyer",
     },
     {
       sender: buyer.name,
-      text: buyer.openingVoiceOfferHindi,
+      text: "Market ke hisaab se main aapko ₹190 per basket offer kar sakta hoon.",
       role: "buyer",
     },
     {
-      sender: "Sakhi AI Assistant",
-      text: `Buyer ne ₹${buyer.initialOfferPrice}/basket ka offer diya hai. Aap ₹205 se ₹220 ka counter offer de sakti hain.`,
+      sender: "Sakhi",
+      text: "Buyer ₹190 offer kar raha hai. Aapka minimum kitna rate rahega?",
       role: "ai",
     },
   ]);
@@ -79,40 +79,40 @@ export const BuyerCallModal: React.FC<BuyerCallModalProps> = ({
           ...newTurns,
           {
             sender: buyer.name,
-            text: buyer.dealAcceptedVoiceHindi,
+            text: "Theek hai, ₹205 per piece par deal pakki karte hain!",
             role: "buyer",
           },
           {
-            sender: "Sakhi AI Assistant",
-            text: `Buyer ne ₹${amount}/basket par deal swikar kar li hai! Kya main is deal ko confirm kar doon?`,
+            sender: "Sakhi",
+            text: `Buyer ne ₹${amount} par haan bol diya hai. Kya main deal confirm kar doon?`,
             role: "ai",
           },
         ]);
         setCurrentBuyerOffer(amount);
-        setNegotiationStep(2); // Accepted!
+        setNegotiationStep(2);
         setIsBuyerSpeaking(false);
-      }, 1500);
+      }, 1200);
     } else {
-      // Buyer Counter 1 (e.g. ₹200 or ₹205)
+      // Buyer Counter 1 (e.g. ₹205)
       setTimeout(() => {
         const revisedOffer = buyer.targetMaxPrice; // 205
         setCallTranscript([
           ...newTurns,
           {
             sender: buyer.name,
-            text: `Aapka product achha hai behenji. Chaliye na aapka na mera, main ₹${revisedOffer} per basket final karta hoon. Deal pakki karein?`,
+            text: `Product achha hai. Main final ₹${revisedOffer} per piece de sakta hoon.`,
             role: "buyer",
           },
           {
-            sender: "Sakhi AI Assistant",
-            text: `Buyer ne final ₹${revisedOffer}/basket ka rate de diya hai (₹${revisedOffer * quantity} total). Yeh achha fair market rate hai.`,
+            sender: "Sakhi",
+            text: `Buyer ₹${revisedOffer} per basket offer kar raha hai. Yeh fair rate hai. Kya aap ready hain?`,
             role: "ai",
           },
         ]);
         setCurrentBuyerOffer(revisedOffer);
         setNegotiationStep(1);
         setIsBuyerSpeaking(false);
-      }, 1500);
+      }, 1200);
     }
   };
 

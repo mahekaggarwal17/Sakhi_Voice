@@ -34,8 +34,8 @@ export default function SakhiVoiceApp() {
     {
       id: "intro-01",
       sender: "AI",
-      textHindi: "Namaste! Main aapki business agent Sakhi hoon. Aap mujhe apne product aur business ke baare mein bata sakti hain. Main aapko market rate, verified buyers aur business loan/grant dhoondhne mein help karungi.",
-      textEnglish: "Namaste! I am your AI business agent Sakhi. Tell me about your products and business. I will help you discover fair market rates, verified bulk buyers, and financial support.",
+      textHindi: "Namaste! Main aapki business agent Sakhi hoon. Aap kya bechna chahti hain?",
+      textEnglish: "Namaste! I am your business agent Sakhi. What product would you like to sell?",
       timestamp: "10:00 AM",
     },
   ]);

@@ -40,9 +40,9 @@ export function executeGetMarketPrice(productQuery: string, location?: string, q
     return {
       toolName: "getMarketPrice",
       status: "WARNING",
-      summaryHindi: "Is product ka verified mandi rate database mein uplabdh nahi hai.",
-      summaryDevanagari: "इस उत्पाद का सत्यापित मंडी रेट डेटाबेस में उपलब्ध नहीं है।",
-      summaryEnglish: "Verified mandi rate currently unavailable for this specific product query.",
+      summaryHindi: "Is product ka verified rate abhi nahi mil raha hai.",
+      summaryDevanagari: "इस प्रोडक्ट का वेरिफाइड रेट अभी नहीं मिल पा रहा है।",
+      summaryEnglish: "Verified rate currently unavailable for this specific product.",
       data: null,
     };
   }
@@ -50,9 +50,9 @@ export function executeGetMarketPrice(productQuery: string, location?: string, q
   return {
     toolName: "getMarketPrice",
     status: "SUCCESS",
-    summaryHindi: `Available market data ke according similar products ka price approximately ₹${result.minPrice} se ₹${result.maxPrice} ${result.unit} hai. Suggested opening rate ₹${result.suggestedNegotiationStart} hai.`,
-    summaryDevanagari: `उपलब्ध मार्केट डेटा के अनुसार मिलते-जुलते उत्पादों की कीमत लगभग ₹${result.minPrice} से ₹${result.maxPrice} प्रति बास्केट है। बातचीत ₹${result.suggestedNegotiationStart} से शुरू करने की सलाह है।`,
-    summaryEnglish: `Retrieved verified range ₹${result.minPrice} - ₹${result.maxPrice} ${result.unit} from ${result.verifiedSource}.`,
+    summaryHindi: `Abhi jo data mila hai, uske hisaab se rate around ₹${result.minPrice} se ₹${result.maxPrice} per ${result.unit.replace("per ", "")} hai.`,
+    summaryDevanagari: `अभी जो डेटा मिला है, उसके हिसाब से रेट अराउंड ₹${result.minPrice} से ₹${result.maxPrice} प्रति बास्केट है।`,
+    summaryEnglish: `Current verified market range is approximately ₹${result.minPrice} – ₹${result.maxPrice} per unit.`,
     data: result,
     actionRequired: "SHOW_MARKET",
   };
@@ -67,16 +67,16 @@ export function executeFindBuyers(productQuery: string, quantity?: number): Tool
   return {
     toolName: "findBuyers",
     status: "SUCCESS",
-    summaryHindi: `Aapke product ke liye ${buyers.length} matching buyers mile hain. Sabse strong match ${buyers[0].name} (${buyers[0].organization}) ka hai jo bulk mein khareed rahe hain.`,
-    summaryDevanagari: `आपके उत्पाद के लिए ${buyers.length} सत्यापित खरीदार मिले हैं। सबसे मजबूत मैच ${buyers[0].name} का है जो थोक में खरीद रहे हैं।`,
-    summaryEnglish: `Found ${buyers.length} verified buyers currently purchasing ${productQuery || "handmade crafts"}. Top match: ${buyers[0].organization}.`,
+    summaryHindi: `Ek achha bulk buyer mila hai — ${buyers[0].name} (${buyers[0].organization}).`,
+    summaryDevanagari: `एक अच्छा बल्क बायर मिला है — ${buyers[0].name}।`,
+    summaryEnglish: `Found verified bulk buyers. Top match: ${buyers[0].name} (${buyers[0].organization}).`,
     data: buyers,
     actionRequired: "SHOW_BUYERS",
   };
 }
 
 /**
- * 3. createDeal Tool (requires human confirmation)
+ * 3. createDeal Tool (requires explicit human confirmation)
  */
 export function executeCreateDeal(
   buyerId: string,
@@ -92,9 +92,9 @@ export function executeCreateDeal(
     return {
       toolName: "createDeal",
       status: "WARNING",
-      summaryHindi: `Buyer ${buyer.name} ne ${quantity} ${product} ke liye ₹${agreedPrice} per unit par agreement diya hai. Kya main is deal ko confirm karke database mein record kar doon?`,
-      summaryDevanagari: `खरीदार ${buyer.name} ने ${quantity} ${product} के लिए ₹${agreedPrice} प्रति इकाई पर सहमति दी है। क्या मैं इस सौदे को कन्फर्म करके रिकॉर्ड कर दूँ?`,
-      summaryEnglish: `Buyer agreed to ₹${agreedPrice}/unit for ${quantity} units (Total: ₹${totalValue.toLocaleString("en-IN")}). Please confirm before saving.`,
+      summaryHindi: `Buyer ${buyer.name} ne ₹${agreedPrice} per piece par ${quantity} ${product} ke liye haan bol diya hai. Kya main deal confirm kar doon?`,
+      summaryDevanagari: `बायर ${buyer.name} ने ₹${agreedPrice} पर ${quantity} ${product} के लिए हाँ बोल दिया है। क्या मैं डील कन्फर्म कर दूँ?`,
+      summaryEnglish: `Buyer agreed to ₹${agreedPrice}/unit for ${quantity} units. Please confirm before saving.`,
       data: {
         buyerId: buyer.id,
         buyerName: buyer.name,
@@ -109,7 +109,7 @@ export function executeCreateDeal(
   }
 
   const newDeal = {
-    dealId: `DEAL-${Date.now().toString().slice(-6)}`,
+    dealId: `DEAL-${Date.now().toString().slice(-4)}`,
     buyerName: buyer.name,
     organization: buyer.organization,
     product,
@@ -126,9 +126,9 @@ export function executeCreateDeal(
   return {
     toolName: "createDeal",
     status: "SUCCESS",
-    summaryHindi: `Badhaai ho! Deal ID ${newDeal.dealId} safaltapoorvak record ho gayi hai. Buyer ko pickup schedule bhej diya gaya hai.`,
-    summaryDevanagari: `बधाई हो! सौदा क्रमांक ${newDeal.dealId} सफलतापूर्वक डेटाबेस में दर्ज हो गया है। खरीदार को पिकअप शेड्यूल भेज दिया गया है।`,
-    summaryEnglish: `Deal successfully finalized and stored in database. Total value: ₹${totalValue.toLocaleString("en-IN")}.`,
+    summaryHindi: `Deal confirm ho gayi hai! Order ID ${newDeal.dealId} save kar li hai.`,
+    summaryDevanagari: `डील कन्फर्म हो गई है! आर्डर आईडी ${newDeal.dealId} सेव कर ली है।`,
+    summaryEnglish: `Deal successfully finalized and stored in database.`,
     data: newDeal,
   };
 }
@@ -142,9 +142,9 @@ export function executeFindSupportOptions(needQuery: string): ToolExecutionResul
   return {
     toolName: "findSupportOptions",
     status: "SUCCESS",
-    summaryHindi: `Aapke business expansion ke liye ${orgs.length} support organizations aur schemes mili hain. Sabse upyukt '${orgs[0].name}' hai jo mahila udyamiyon ko micro-grant aur sahayata dete hain.`,
-    summaryDevanagari: `आपके व्यापार विस्तार के लिए ${orgs.length} सहायता संस्थाएं मिली हैं। सबसे उपयुक्त '${orgs[0].name}' है जो महिला उद्यमियों को अनुदान और कार्यशील पूंजी सहायता देते हैं।`,
-    summaryEnglish: `Found ${orgs.length} support institutions. Recommended: ${orgs[0].name} (${orgs[0].supportCategory}).`,
+    summaryHindi: `Ek support organization mili hai jo women entrepreneurs ke saath kaam karti hai — ${orgs[0].name}.`,
+    summaryDevanagari: `एक सपोर्ट आर्गेनाइजेशन मिली है जो विमेन एंटरप्रेन्योर्स के साथ काम करती है — ${orgs[0].name}।`,
+    summaryEnglish: `Found support organization: ${orgs[0].name}.`,
     data: orgs,
     actionRequired: "SHOW_SUPPORT",
   };
@@ -156,18 +156,18 @@ export function executeFindSupportOptions(needQuery: string): ToolExecutionResul
 export function executeCreateSupportCase(
   state: BusinessMemoryState,
   requestedAmount: string = "₹50,000",
-  purpose: string = "Production Capacity Expansion & Raw Material"
+  purpose: string = "Production Capacity Expansion"
 ): ToolExecutionResult {
   const org = SEED_SUPPORT_ORGS[0];
-  const caseId = `CASE-SKH-${Date.now().toString().slice(-5)}`;
+  const caseId = `CASE-${Date.now().toString().slice(-4)}`;
 
   const supportCase: SupportCaseRecord = {
     caseId,
     createdAt: new Date().toISOString(),
     entrepreneurProfile: {
       product: state.product || "Handmade Baskets",
-      currentProduction: `${state.quantity || 120} units active cycle`,
-      location: state.location || "Jaipur Rural Craft Cluster",
+      currentProduction: `${state.quantity || 150} units`,
+      location: state.location || "Greater Noida",
     },
     supportRequirement: {
       purpose,
@@ -175,12 +175,12 @@ export function executeCreateSupportCase(
       supportCategory: org.supportCategory,
     },
     matchedOrganization: org,
-    conversationSummary: `Entrepreneur produces quality ${state.materialOrVariety || "bamboo/cane"} ${state.product || "handmade baskets"}. Successfully matched with buyer Rajesh Sharma at ₹205/unit. Requesting ${requestedAmount} for expansion to fulfill larger orders.`,
+    conversationSummary: `Entrepreneur produces quality ${state.product || "handmade baskets"}. Agreed deal with buyer Rajesh Sharma at ₹205/piece for ${state.quantity || 150} units. Requesting ₹50,000 for expansion.`,
     verifiedDetails: [
       `Product: ${state.product || "Handmade Baskets"}`,
-      `Capacity: ${state.quantity || 120} units`,
-      `Price Anchor: ₹205 agreed deal`,
-      `Verified identity: SHG Rural Producer ID verified`,
+      `Current Order: ${state.quantity || 150} units`,
+      `Price: ₹205 agreed deal`,
+      `Need: Business Expansion grant`,
     ],
     status: "CASE_CREATED",
   };
@@ -190,9 +190,9 @@ export function executeCreateSupportCase(
   return {
     toolName: "createSupportCase",
     status: "SUCCESS",
-    summaryHindi: `Aapka support case (ID: ${caseId}) Sakhi Foundation ke counselor ${org.representativeName} ko dispatch kar diya gaya hai. Aapki poori conversation summary unke paas share ho gayi hai, aapko dobara explain nahi karna padega.`,
-    summaryDevanagari: `आपका सहायता केस सखी फाउंडेशन की काउंसलर ${org.representativeName} को भेज दिया गया है। आपकी पूरी बातचीत का विवरण उनके पास पहुँच गया है, आपको दोबारा शुरू से नहीं बताना पड़ेगा।`,
-    summaryEnglish: `Structured Case #${caseId} generated with full context and dispatched to counselor ${org.representativeName}. Ready for live voice escalation.`,
+    summaryHindi: `Main aapki details aur ab tak ki baat counselor Priya Sharma se share kar rahi hoon, taaki aapko dobara na batana pade.`,
+    summaryDevanagari: `मैं आपकी डिटेल्स और अब तक की बात काउंसलर प्रिया शर्मा से शेयर कर रही हूँ, ताकि आपको दोबारा ना बताना पड़े।`,
+    summaryEnglish: `Case details shared with counselor Priya Sharma so you won't need to repeat anything.`,
     data: supportCase,
     actionRequired: "ESCALATE",
   };
